@@ -1,4 +1,4 @@
-export const VERSION = "1.1.0";
+export const VERSION = "1.1.1";
 
 // Injected at compile time via --define in build.sh; falls back to startup time in dev
 declare const __BUILD_TIME__: string | undefined;
