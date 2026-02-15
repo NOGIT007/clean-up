@@ -140,7 +140,10 @@ export async function startWebServer(options: CliOptions): Promise<void> {
       // --- Static: serve the HTML frontend ---
       if (url.pathname === "/" || url.pathname === "/index.html") {
         return new Response(htmlContent, {
-          headers: { "Content-Type": "text/html; charset=utf-8" },
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+          },
         });
       }
 
@@ -319,6 +322,94 @@ export async function startWebServer(options: CliOptions): Promise<void> {
           }
 
           return Response.json({ indexing, enabled, raw: output.trim() });
+        } catch (err) {
+          return Response.json({ error: String(err) }, { status: 500 });
+        }
+      }
+
+      // --- API: check macOS privacy permissions ---
+      if (url.pathname === "/api/permissions" && req.method === "GET") {
+        const home = process.env.HOME || "/Users/" + process.env.USER;
+        const checks = await Promise.all([
+          // Full Disk Access: try reading ~/Library/Safari
+          (async () => {
+            try {
+              const fs = require("fs");
+              await fs.promises.readdir(home + "/Library/Safari");
+              return true;
+            } catch {
+              return false;
+            }
+          })(),
+          // Automation (Finder): try osascript
+          (async () => {
+            try {
+              const proc = Bun.spawn(
+                ["osascript", "-e", 'tell app "Finder" to get name of home'],
+                { stdout: "pipe", stderr: "pipe" },
+              );
+              return (await proc.exited) === 0;
+            } catch {
+              return false;
+            }
+          })(),
+          // App Management: writable /Applications
+          (async () => {
+            try {
+              const fs = require("fs");
+              await fs.promises.access("/Applications", fs.constants.W_OK);
+              return true;
+            } catch {
+              return false;
+            }
+          })(),
+        ]);
+
+        return Response.json([
+          {
+            id: "full-disk-access",
+            name: "Full Disk Access",
+            description:
+              "Required for scanning Safari caches, iCloud data, and protected ~/Library directories",
+            granted: checks[0],
+            deepLink:
+              "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles",
+          },
+          {
+            id: "automation",
+            name: "Automation (Finder)",
+            description:
+              "Required for moving files to Trash via Finder — the safe deletion method",
+            granted: checks[1],
+            deepLink:
+              "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation",
+          },
+          {
+            id: "app-management",
+            name: "App Management",
+            description: "Allows uninstalling apps from /Applications",
+            granted: checks[2],
+            deepLink:
+              "x-apple.systempreferences:com.apple.preference.security?Privacy_AppManagement",
+          },
+        ]);
+      }
+
+      // --- API: open System Settings to a specific pane ---
+      if (url.pathname === "/api/open-settings" && req.method === "POST") {
+        const body = (await req.json()) as { deepLink?: string };
+        if (
+          !body.deepLink ||
+          !body.deepLink.startsWith("x-apple.systempreferences:")
+        ) {
+          return Response.json({ error: "Invalid deep link" }, { status: 400 });
+        }
+        try {
+          Bun.spawn(["open", body.deepLink], {
+            stdout: "ignore",
+            stderr: "ignore",
+          });
+          return Response.json({ ok: true });
         } catch (err) {
           return Response.json({ error: String(err) }, { status: 500 });
         }

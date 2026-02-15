@@ -1056,6 +1056,85 @@
         animation: fadeUp 0.3s var(--ease) both;
       }
 
+      #permissionsSection {
+        display: none;
+      }
+      #permissionsSection.visible {
+        display: block;
+        animation: fadeUp 0.3s var(--ease) both;
+      }
+      .perm-card {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem 1.125rem;
+        background: var(--surface-solid);
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--radius);
+        margin-bottom: 0.625rem;
+      }
+      .perm-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .perm-icon.granted {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .perm-icon.missing {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+      .perm-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .perm-name {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .perm-desc {
+        font-size: 12px;
+        color: var(--text-dim);
+        line-height: 1.4;
+      }
+      .perm-badge {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .perm-badge.granted {
+        background: var(--accent-soft);
+        color: #065f46;
+      }
+      .perm-open-btn {
+        padding: 0.35rem 0.875rem;
+        border: 1.5px solid var(--amber-border);
+        border-radius: var(--radius-xs);
+        background: var(--amber-soft);
+        color: #92400e;
+        font-family: var(--font);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s var(--ease);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .perm-open-btn:hover {
+        background: #fef3c7;
+        border-color: var(--amber);
+      }
+
       .app-search {
         width: 100%;
         padding: 0.625rem 1rem 0.625rem 2.5rem;
@@ -1369,14 +1448,33 @@
           <span class="topbar-title">Clean Up</span>
         </div>
         <nav class="topbar-nav">
-          <button class="topbar-nav-btn active" onclick="switchMode('clean')">
-            Clean Up
+          <button
+            class="topbar-nav-btn active"
+            data-mode="clean"
+            onclick="switchMode('clean')"
+          >
+            Clean
           </button>
-          <button class="topbar-nav-btn" onclick="switchMode('uninstall')">
-            Uninstall Apps
+          <button
+            class="topbar-nav-btn"
+            data-mode="uninstall"
+            onclick="switchMode('uninstall')"
+          >
+            Uninstall
           </button>
-          <button class="topbar-nav-btn" onclick="switchMode('spotlight')">
-            Reindex Spotlight
+          <button
+            class="topbar-nav-btn"
+            data-mode="spotlight"
+            onclick="switchMode('spotlight')"
+          >
+            Spotlight
+          </button>
+          <button
+            class="topbar-nav-btn"
+            data-mode="permissions"
+            onclick="switchMode('permissions')"
+          >
+            Permissions
           </button>
         </nav>
         <div class="topbar-spacer"></div>
@@ -1508,6 +1606,20 @@
           <div class="spotlight-note">
             Takes ~10-30 min. CPU usage will be higher while indexing.
           </div>
+        </div>
+      </section>
+
+      <!-- Permissions Section -->
+      <section id="permissionsSection">
+        <div class="hero" style="margin-top: 0">
+          <h1>Permissions</h1>
+          <p>macOS privacy permissions needed for full functionality.</p>
+        </div>
+        <div id="permList"></div>
+        <div style="text-align: center; margin-top: 1rem">
+          <button class="btn btn-secondary" onclick="loadPermissions()">
+            Check Again
+          </button>
         </div>
       </section>
 
@@ -1748,7 +1860,8 @@
       let isDryRun = false;
 
       // Uninstall state
-      let currentMode = "clean"; // 'clean' | 'uninstall'
+      let currentMode = "clean"; // 'clean' | 'uninstall' | 'spotlight' | 'permissions'
+      let permsLoaded = false;
       let appsList = [];
       let appsLoaded = false;
       let selectedApp = null;
@@ -2291,14 +2404,8 @@
         currentMode = mode;
 
         // Update topbar nav buttons
-        const modeMap = {
-          clean: "clean",
-          uninstall: "uninstall",
-          spotlight: "reindex",
-        };
         document.querySelectorAll(".topbar-nav-btn").forEach((btn) => {
-          const text = btn.textContent.trim().toLowerCase();
-          btn.classList.toggle("active", text.includes(modeMap[mode]));
+          btn.classList.toggle("active", btn.dataset.mode === mode);
         });
 
         // Hide all sections first
@@ -2308,6 +2415,9 @@
         document.getElementById("bottomBar").classList.remove("visible");
         document.getElementById("uninstallSection").classList.remove("visible");
         document.getElementById("spotlightSection").classList.remove("visible");
+        document
+          .getElementById("permissionsSection")
+          .classList.remove("visible");
         stopSpotlightPoll();
 
         if (mode === "clean") {
@@ -2325,6 +2435,11 @@
         } else if (mode === "spotlight") {
           document.getElementById("spotlightSection").classList.add("visible");
           checkSpotlightStatus();
+        } else if (mode === "permissions") {
+          document
+            .getElementById("permissionsSection")
+            .classList.add("visible");
+          if (!permsLoaded) loadPermissions();
         }
       }
 
@@ -2632,6 +2747,69 @@
         if (h > 0) return h + "h";
         return "<1h";
       }
+
+      // =========================================================================
+      // Permissions
+      // =========================================================================
+      async function loadPermissions() {
+        const container = document.getElementById("permList");
+        container.innerHTML =
+          '<p style="text-align:center;color:var(--text-dim);font-size:13px;padding:1rem 0">Checking permissions&hellip;</p>';
+        try {
+          const res = await fetch("/api/permissions");
+          const perms = await res.json();
+          permsLoaded = true;
+          container.innerHTML = "";
+          perms.forEach((p) => {
+            const card = document.createElement("div");
+            card.className = "perm-card";
+            const iconSvg = p.granted
+              ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+              : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+            const action = p.granted
+              ? '<span class="perm-badge granted">Granted</span>'
+              : '<button class="perm-open-btn" onclick="openPermSettings(\'' +
+                p.deepLink +
+                "')\">Open Settings</button>";
+            card.innerHTML =
+              '<div class="perm-icon ' +
+              (p.granted ? "granted" : "missing") +
+              '">' +
+              iconSvg +
+              "</div>" +
+              '<div class="perm-info">' +
+              '<div class="perm-name">' +
+              p.name +
+              "</div>" +
+              '<div class="perm-desc">' +
+              p.description +
+              "</div>" +
+              "</div>" +
+              action;
+            container.appendChild(card);
+          });
+        } catch {
+          container.innerHTML =
+            '<p style="text-align:center;color:var(--danger);font-size:13px;padding:1rem 0">Failed to check permissions</p>';
+        }
+      }
+
+      async function openPermSettings(deepLink) {
+        try {
+          await fetch("/api/open-settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deepLink }),
+          });
+        } catch {}
+      }
+
+      // Re-check permissions when user returns from System Settings
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && currentMode === "permissions") {
+          loadPermissions();
+        }
+      });
 
       function toast(msg, isError) {
         const el = document.getElementById("toast");
