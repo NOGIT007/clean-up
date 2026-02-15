@@ -415,6 +415,19 @@ export async function startWebServer(options: CliOptions): Promise<void> {
         }
       }
 
+      // --- API: open Trash in Finder ---
+      if (url.pathname === "/api/open-trash" && req.method === "POST") {
+        try {
+          Bun.spawn(["open", "trash://"], {
+            stdout: "ignore",
+            stderr: "ignore",
+          });
+          return Response.json({ ok: true });
+        } catch (err) {
+          return Response.json({ error: String(err) }, { status: 500 });
+        }
+      }
+
       // --- API: quit the server ---
       if (url.pathname === "/api/quit" && req.method === "POST") {
         setTimeout(() => {

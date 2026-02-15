@@ -434,6 +434,24 @@
       .scanner-toggle-btn:hover {
         background: var(--accent-glow);
       }
+      .first-time-tip {
+        margin-top: 0.5rem;
+        font-size: 12.5px;
+        color: var(--text-dim);
+      }
+      .first-time-tip summary {
+        cursor: pointer;
+        font-weight: 500;
+        color: var(--text-secondary);
+        padding: 0.25rem 0;
+      }
+      .first-time-tip summary:hover {
+        color: var(--text);
+      }
+      .first-time-tip p {
+        margin-top: 0.25rem;
+        line-height: 1.5;
+      }
 
       /* Spotlight info card */
       .spotlight-card {
@@ -1002,6 +1020,20 @@
         margin-bottom: 1.25rem;
         line-height: 1.5;
       }
+      .modal .confirm-warning {
+        font-size: 12.5px;
+        color: #92400e;
+        background: var(--amber-soft);
+        border: 1.5px solid var(--amber-border);
+        border-radius: var(--radius-xs);
+        padding: 0.625rem 0.75rem;
+        margin-bottom: 1rem;
+        line-height: 1.45;
+        display: none;
+      }
+      .modal .confirm-warning.visible {
+        display: block;
+      }
       .modal .safe-note {
         font-size: 12px;
         color: var(--accent);
@@ -1042,6 +1074,16 @@
       .toast.error {
         background: var(--danger);
         color: #fff;
+      }
+      .toast a {
+        color: inherit;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        margin-left: 0.5rem;
+        cursor: pointer;
+      }
+      .toast a:hover {
+        opacity: 0.8;
       }
 
       /* ============================================================
@@ -1162,6 +1204,13 @@
       .perm-open-btn:hover {
         background: #fef3c7;
         border-color: var(--amber);
+      }
+      .perm-help {
+        font-size: 11.5px;
+        color: var(--text-dim);
+        line-height: 1.4;
+        margin-top: 0.25rem;
+        padding-left: 0.125rem;
       }
 
       .app-search {
@@ -1567,6 +1616,14 @@
             Scan Selected
           </button>
         </div>
+        <details class="first-time-tip">
+          <summary>First time?</summary>
+          <p>
+            If macOS showed a security warning, right-click the app &rarr; Open
+            &rarr; click Open. This is needed once because the app isn't
+            notarized.
+          </p>
+        </details>
       </section>
 
       <!-- Scanning Spinner -->
@@ -1823,6 +1880,10 @@
           <div class="modal-icon">&#128465;</div>
           <h3 id="confirmTitle">Confirm</h3>
           <p id="confirmBody"></p>
+          <div class="confirm-warning" id="confirmWarning">
+            &#9888;&#65039; That's a lot of data. Items stay in Trash until you
+            empty it, so disk space won't be freed immediately.
+          </div>
           <div class="safe-note">
             <svg
               width="13"
@@ -2456,6 +2517,9 @@
           `Move ${sel.length} item${sel.length === 1 ? "" : "s"} to Trash?`;
         document.getElementById("confirmBody").textContent =
           `This will free approximately ${fmtBytes(size)}.`;
+        const warn = document.getElementById("confirmWarning");
+        if (size > 5 * 1024 ** 3) warn.classList.add("visible");
+        else warn.classList.remove("visible");
         document.getElementById("confirmModal").classList.add("visible");
       }
 
@@ -2503,7 +2567,8 @@
 
           let msg = `Moved ${ok} item${ok === 1 ? "" : "s"} to Trash`;
           if (fail > 0) msg += ` (${fail} failed)`;
-          toast(msg, fail > 0);
+          const link = ok > 0 ? '<a onclick="openTrash()">Open Trash</a>' : "";
+          toast(msg, fail > 0, fail > 0 ? undefined : msg + link);
         } catch (err) {
           toast("Trash failed: " + err.message, true);
         } finally {
@@ -2789,6 +2854,7 @@
           `Uninstall ${selectedApp.name}?`;
         document.getElementById("confirmBody").textContent =
           `This will move ${paths.length} item${paths.length === 1 ? "" : "s"} (${fmtBytes(size)}) to Trash.`;
+        document.getElementById("confirmWarning").classList.remove("visible");
 
         // Temporarily override the confirm button
         const confirmBtn = document.getElementById("confirmBtn");
@@ -2897,6 +2963,14 @@
           const perms = await res.json();
           permsLoaded = true;
           container.innerHTML = "";
+          const permHelpMap = {
+            "full-disk-access":
+              "Without this, some protected folders (Safari caches, iCloud data) will be skipped during scans. To grant: open Settings link \u2192 toggle Clean Up on.",
+            automation:
+              "Without this, Clean Up cannot move files to Trash safely. macOS will prompt you to allow Finder access on first use.",
+            "app-management":
+              "Without this, apps in /Applications owned by root cannot be uninstalled. To grant: open Settings link \u2192 toggle Clean Up on.",
+          };
           perms.forEach((p) => {
             const card = document.createElement("div");
             card.className = "perm-card";
@@ -2908,6 +2982,10 @@
               : '<button class="perm-open-btn" onclick="openPermSettings(\'' +
                 p.deepLink +
                 "')\">Open Settings</button>";
+            const helpHint =
+              !p.granted && permHelpMap[p.id]
+                ? '<div class="perm-help">' + permHelpMap[p.id] + "</div>"
+                : "";
             card.innerHTML =
               '<div class="perm-icon ' +
               (p.granted ? "granted" : "missing") +
@@ -2921,6 +2999,7 @@
               '<div class="perm-desc">' +
               p.description +
               "</div>" +
+              helpHint +
               "</div>" +
               action;
             container.appendChild(card);
@@ -2948,14 +3027,19 @@
         }
       });
 
-      function toast(msg, isError) {
+      function toast(msg, isError, html) {
         const el = document.getElementById("toast");
-        el.textContent = msg;
+        if (html) el.innerHTML = html;
+        else el.textContent = msg;
         el.classList.toggle("error", !!isError);
         el.classList.remove("visible");
         void el.offsetWidth;
         el.classList.add("visible");
-        setTimeout(() => el.classList.remove("visible"), 3000);
+        setTimeout(() => el.classList.remove("visible"), 4000);
+      }
+
+      function openTrash() {
+        fetch("/api/open-trash", { method: "POST" }).catch(() => {});
       }
     </script>
   </body>

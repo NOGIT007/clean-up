@@ -8,7 +8,19 @@ import Foundation
 class AppDelegate: NSObject, NSApplicationDelegate {
     let serverProcess = Process()
 
+    /// Kill any leftover clean-up-server processes from a previous session
+    /// (e.g. user closed the browser tab without quitting the app).
+    private func killStaleServers() {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        task.arguments = ["-f", "clean-up-server --web"]
+        try? task.run()
+        task.waitUntilExit()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        killStaleServers()
+
         let bundle = Bundle.main.bundlePath
         let serverBin = bundle + "/Contents/MacOS/clean-up-server"
 
