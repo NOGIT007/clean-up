@@ -1,0 +1,19 @@
+{
+  "name": "clean-up",
+  "version": "1.0.0",
+  "description": "Interactive macOS cleanup CLI tool — zero dependencies",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "clean-up": "src/index.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile clean-up",
+    "build:app": "bash scripts/build.sh",
+    "install:app": "bash scripts/install.sh"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

@@ -1,0 +1,2629 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clean Up</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2310b981'/%3E%3Cstop offset='100%25' stop-color='%230d9488'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='7' fill='url(%23g)'/%3E%3Cpath d='M16 5l1.45 4.35L21.5 10.5l-4.05 1.15L16 16l-1.45-4.35L10.5 10.5l4.05-1.15L16 5z' fill='white'/%3E%3Cpath d='M9 20l.73 2.18L11.9 22.91l-2.17.73L9 25.82l-.73-2.18L6.1 22.91l2.17-.73L9 20z' fill='white' opacity='.8'/%3E%3Cpath d='M23 16l.73 2.18L25.9 18.91l-2.17.73L23 21.82l-.73-2.18L20.1 18.91l2.17-.73L23 16z' fill='white' opacity='.8'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #f5f3ef;
+        --bg2: #eae7e0;
+        --surface: rgba(255, 255, 255, 0.72);
+        --surface-solid: #fff;
+        --border: rgba(0, 0, 0, 0.06);
+        --border-strong: rgba(0, 0, 0, 0.1);
+        --text: #1c1917;
+        --text-secondary: #57534e;
+        --text-dim: #a8a29e;
+        --accent: #10b981;
+        --accent-soft: #d1fae5;
+        --accent-glow: rgba(16, 185, 129, 0.12);
+        --teal: #0d9488;
+        --danger: #ef4444;
+        --danger-soft: #fef2f2;
+        --danger-border: rgba(239, 68, 68, 0.2);
+        --amber: #f59e0b;
+        --amber-soft: #fffbeb;
+        --amber-border: rgba(245, 158, 11, 0.25);
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--border);
+        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--border);
+        --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.1), 0 0 0 1px var(--border);
+        --radius: 14px;
+        --radius-sm: 10px;
+        --radius-xs: 7px;
+        --font: "DM Sans", system-ui, -apple-system, sans-serif;
+        --mono: "JetBrains Mono", "SF Mono", monospace;
+        --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      html {
+        height: 100%;
+      }
+
+      body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100%;
+        line-height: 1.55;
+        font-size: 15px;
+        -webkit-font-smoothing: antialiased;
+        position: relative;
+      }
+
+      /* Subtle grain texture */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        opacity: 0.3;
+        pointer-events: none;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+        z-index: 9999;
+      }
+
+      /* ============================================================
+   LAYOUT
+   ============================================================ */
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 1.25rem 3rem;
+      }
+
+      /* ============================================================
+   TOP BAR
+   ============================================================ */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(20px) saturate(1.8);
+        -webkit-backdrop-filter: blur(20px) saturate(1.8);
+        background: rgba(245, 243, 239, 0.8);
+        border-bottom: 1px solid var(--border);
+        padding: 0 1.25rem;
+        margin-bottom: 2rem;
+      }
+      .topbar-inner {
+        max-width: 720px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        height: 52px;
+        gap: 0.75rem;
+      }
+      .topbar-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .topbar-icon {
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--accent), var(--teal));
+        border-radius: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        box-shadow:
+          0 2px 6px rgba(16, 185, 129, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+      .topbar-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.01em;
+      }
+      .topbar-nav {
+        display: inline-flex;
+        background: var(--bg2);
+        border-radius: 999px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .topbar-nav-btn {
+        padding: 0.3rem 0.875rem;
+        border: none;
+        border-radius: 999px;
+        font-family: var(--font);
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s var(--ease);
+        background: transparent;
+        color: var(--text-dim);
+        white-space: nowrap;
+      }
+      .topbar-nav-btn.active {
+        background: var(--surface-solid);
+        color: var(--text);
+        box-shadow: var(--shadow-sm);
+      }
+      .topbar-nav-btn:not(.active):hover {
+        color: var(--text-secondary);
+      }
+      .topbar-spacer {
+        flex: 1;
+      }
+      .topbar-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+      }
+      .topbar-version {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-dim);
+        font-family: var(--mono);
+        white-space: nowrap;
+      }
+      .topbar-sep {
+        width: 1px;
+        height: 16px;
+        background: var(--border-strong);
+      }
+      .quit-btn {
+        background: none;
+        border: none;
+        color: var(--text-dim);
+        font-family: var(--font);
+        font-size: 12.5px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-xs);
+        transition: all 0.15s var(--ease);
+      }
+      .quit-btn:hover {
+        color: var(--danger);
+        background: var(--danger-soft);
+      }
+
+      /* ============================================================
+   DRY RUN BANNER
+   ============================================================ */
+      .dry-run-banner {
+        display: none;
+        background: var(--amber-soft);
+        border: 1px solid var(--amber-border);
+        color: #92400e;
+        padding: 0.625rem 1rem;
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 1.5rem;
+        text-align: center;
+      }
+      .dry-run-banner.visible {
+        display: block;
+      }
+
+      /* ============================================================
+   HERO / INTRO
+   ============================================================ */
+      .hero {
+        text-align: center;
+        margin-bottom: 2rem;
+        animation: fadeUp 0.5s var(--ease) both;
+      }
+      .hero h1 {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: var(--text);
+        margin-bottom: 0.25rem;
+      }
+      .hero p {
+        font-size: 15px;
+        color: var(--text-secondary);
+        font-weight: 400;
+      }
+      .hero-safe {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        margin-top: 0.75rem;
+        background: var(--accent-soft);
+        color: #065f46;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 0.3rem 0.75rem;
+        border-radius: 999px;
+        letter-spacing: 0.01em;
+      }
+      .hero-safe svg {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+      }
+
+      /* ============================================================
+   SCANNER CARDS
+   ============================================================ */
+      .scanner-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+      }
+      @media (max-width: 540px) {
+        .scanner-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .scanner-card {
+        background: var(--surface-solid);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 16px;
+        padding: 1.125rem 1.125rem 1rem;
+        cursor: pointer;
+        transition: all 0.25s var(--ease);
+        user-select: none;
+        position: relative;
+        overflow: hidden;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.04),
+          0 4px 12px rgba(0, 0, 0, 0.03);
+      }
+      .scanner-card::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, var(--accent), var(--teal));
+        border-radius: 0 2px 2px 0;
+        opacity: 0;
+        transition: opacity 0.25s var(--ease);
+      }
+      .scanner-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        opacity: 0;
+        transition: opacity 0.25s var(--ease);
+        background: radial-gradient(
+          ellipse at top left,
+          rgba(16, 185, 129, 0.06),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+      .scanner-card:hover {
+        border-color: rgba(0, 0, 0, 0.1);
+        box-shadow:
+          0 2px 6px rgba(0, 0, 0, 0.06),
+          0 8px 24px rgba(0, 0, 0, 0.06);
+        transform: translateY(-2px);
+      }
+      .scanner-card.selected {
+        border-color: rgba(16, 185, 129, 0.3);
+        box-shadow:
+          0 0 0 1px rgba(16, 185, 129, 0.12),
+          0 4px 16px rgba(16, 185, 129, 0.1),
+          0 8px 32px rgba(16, 185, 129, 0.06);
+      }
+      .scanner-card.selected::before {
+        opacity: 1;
+      }
+      .scanner-card.selected::after {
+        opacity: 1;
+      }
+
+      .scanner-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+      }
+      .scanner-card-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+      }
+      .scanner-card .check-circle {
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--border-strong);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s var(--ease-spring);
+        flex-shrink: 0;
+        color: transparent;
+        background: rgba(255, 255, 255, 0.8);
+      }
+      .scanner-card.selected .check-circle {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+        transform: scale(1.08);
+      }
+      .scanner-card h3 {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.01em;
+        margin-bottom: 2px;
+      }
+      .scanner-card p {
+        font-size: 12.5px;
+        color: var(--text-dim);
+        line-height: 1.4;
+      }
+
+      /* scanner icon colors */
+      .icon-dev {
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        color: #3b82f6;
+      }
+      .icon-cache {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #d97706;
+      }
+      .icon-app {
+        background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+        color: #ec4899;
+      }
+      .icon-large {
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        color: #16a34a;
+      }
+      .icon-unused {
+        background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+        color: #7c3aed;
+      }
+      .icon-brew {
+        background: linear-gradient(135deg, #fff7ed, #fed7aa);
+        color: #ea580c;
+      }
+
+      /* Scanner toggle (Select All / Deselect All) */
+      .scanner-toggle-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 0.5rem;
+      }
+      .scanner-toggle-btn {
+        background: none;
+        border: none;
+        font-family: var(--font);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent);
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-xs);
+        transition: all 0.15s var(--ease);
+      }
+      .scanner-toggle-btn:hover {
+        background: var(--accent-glow);
+      }
+
+      /* Spotlight info card */
+      .spotlight-card {
+        padding: 1rem 1.25rem;
+        background: var(--surface-solid);
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--radius);
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.55;
+      }
+      .spotlight-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        font-size: 13.5px;
+        color: var(--text);
+      }
+      .spotlight-card-header .spotlight-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        background: #eff6ff;
+        color: #3b82f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .spotlight-actions {
+        margin-top: 0.75rem;
+      }
+      .btn-sm {
+        padding: 0.4rem 0.875rem;
+        font-size: 12.5px;
+      }
+      .spotlight-note {
+        margin-top: 0.5rem;
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+
+      /* Spotlight status indicator */
+      .spotlight-status {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem 1.125rem;
+        background: var(--surface-solid);
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--radius);
+        margin-bottom: 1rem;
+      }
+      .spotlight-status-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: var(--bg2);
+      }
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--text-dim);
+        transition: background 0.3s var(--ease);
+      }
+      .spotlight-status.idle .status-dot {
+        background: var(--accent);
+      }
+      .spotlight-status.indexing .status-dot {
+        background: var(--amber);
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      .spotlight-status.indexing .spotlight-status-icon {
+        background: var(--amber-soft);
+      }
+      .spotlight-status.idle .spotlight-status-icon {
+        background: var(--accent-soft);
+      }
+      .spotlight-status-text {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .spotlight-status-label {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .spotlight-status-detail {
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      /* App icon image in uninstaller */
+      .app-icon-img {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        object-fit: contain;
+      }
+      .app-icon-img.large {
+        width: 48px;
+        height: 48px;
+      }
+
+      /* ============================================================
+   BUTTONS
+   ============================================================ */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        font-weight: 600;
+        font-family: var(--font);
+        cursor: pointer;
+        transition: all 0.2s var(--ease);
+        letter-spacing: -0.01em;
+      }
+      .btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        box-shadow:
+          0 2px 8px rgba(16, 185, 129, 0.3),
+          0 0 0 1px rgba(16, 185, 129, 0.15);
+      }
+      .btn-primary:not(:disabled):hover {
+        background: #0ea572;
+        box-shadow:
+          0 4px 14px rgba(16, 185, 129, 0.35),
+          0 0 0 1px rgba(16, 185, 129, 0.2);
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--surface-solid);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-strong);
+        box-shadow: var(--shadow-sm);
+      }
+      .btn-secondary:hover {
+        background: var(--bg2);
+        border-color: rgba(0, 0, 0, 0.15);
+      }
+      .btn-danger {
+        background: var(--danger);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+      }
+      .btn-danger:not(:disabled):hover {
+        background: #dc2626;
+        box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+        transform: translateY(-1px);
+      }
+      .actions {
+        display: flex;
+        gap: 0.625rem;
+        justify-content: center;
+      }
+
+      /* ============================================================
+   SPINNER / SCANNING STATE
+   ============================================================ */
+      .spinner-wrap {
+        display: none;
+        text-align: center;
+        padding: 4rem 1rem;
+        animation: fadeUp 0.3s var(--ease) both;
+      }
+      .spinner-wrap.visible {
+        display: block;
+      }
+      .scan-anim {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 1.25rem;
+        position: relative;
+      }
+      .scan-anim .ring {
+        position: absolute;
+        inset: 0;
+        border: 2.5px solid var(--bg2);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      .scan-anim .ring:nth-child(2) {
+        inset: 6px;
+        border-top-color: var(--teal);
+        animation-duration: 1.4s;
+        animation-direction: reverse;
+      }
+      .spinner-wrap p {
+        font-size: 15px;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+      .spinner-wrap .scan-hint {
+        font-size: 13px;
+        color: var(--text-dim);
+        margin-top: 0.25rem;
+        font-weight: 400;
+      }
+
+      /* ============================================================
+   RESULTS
+   ============================================================ */
+      .results-section {
+        display: none;
+      }
+      .results-section.visible {
+        display: block;
+        animation: fadeUp 0.4s var(--ease) both;
+      }
+
+      .results-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+      .results-bar-left h2 {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .results-bar-left .summary {
+        font-size: 13px;
+        color: var(--text-dim);
+        font-weight: 400;
+      }
+      .results-bar-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .select-all-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 13px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-weight: 500;
+        user-select: none;
+      }
+
+      /* Results grouped by category */
+      .results-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        margin-bottom: 1rem;
+      }
+
+      .results-group {
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.04),
+          0 4px 12px rgba(0, 0, 0, 0.03);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+      }
+
+      .results-group-header {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        padding: 0.75rem 1rem;
+        background: var(--surface-solid);
+        border-bottom: 1px solid var(--border);
+      }
+      .results-group-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        flex-shrink: 0;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      }
+      .results-group-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .results-group-name {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.01em;
+      }
+      .results-group-meta {
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+      .results-group-size {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      /* Column header inside each group */
+      .results-list-header {
+        display: grid;
+        grid-template-columns: 28px 1fr 72px 52px;
+        gap: 0.5rem;
+        padding: 0.4rem 0.875rem;
+        background: var(--bg2);
+        font-size: 10.5px;
+        font-weight: 600;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        align-items: center;
+      }
+      .results-list-header span {
+        cursor: pointer;
+        transition: color 0.15s;
+        user-select: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+      .results-list-header span:hover {
+        color: var(--text-secondary);
+      }
+      .results-list-header span.sorted {
+        color: var(--accent);
+      }
+      .results-list-header .arrow {
+        font-size: 9px;
+      }
+
+      .result-row {
+        display: grid;
+        grid-template-columns: 28px 1fr 72px 52px;
+        gap: 0.5rem;
+        padding: 0.625rem 0.875rem;
+        background: var(--surface-solid);
+        align-items: center;
+        transition: background 0.1s;
+        font-size: 13px;
+        border-top: 1px solid var(--border);
+      }
+      .result-row:first-child {
+        border-top: none;
+      }
+      .result-row:hover {
+        background: #fafaf8;
+      }
+      .result-row .path-cell {
+        min-width: 0;
+      }
+      .result-row .path-main {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+      }
+      .result-row .path-meta {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1px;
+      }
+      .result-row .badge {
+        font-size: 10.5px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
+      .result-row .badge-warn {
+        color: #92400e;
+        background: #fffbeb;
+        padding: 0 0.375rem;
+        border-radius: 4px;
+      }
+      .result-row .size-cell {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-align: right;
+        white-space: nowrap;
+      }
+      .result-row .age-cell {
+        font-size: 12px;
+        color: var(--text-dim);
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid var(--border-strong);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s var(--ease);
+        position: relative;
+        flex-shrink: 0;
+        background: var(--surface-solid);
+      }
+      input[type="checkbox"]:checked {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      input[type="checkbox"]:checked::after {
+        content: "";
+        position: absolute;
+        left: 4.5px;
+        top: 1.5px;
+        width: 5px;
+        height: 9px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+
+      /* Bottom action bar */
+      .bottom-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        backdrop-filter: blur(20px) saturate(1.8);
+        -webkit-backdrop-filter: blur(20px) saturate(1.8);
+        background: rgba(245, 243, 239, 0.85);
+        border-top: 1px solid var(--border);
+        padding: 0.75rem 1.25rem;
+        display: none;
+      }
+      .bottom-bar.visible {
+        display: block;
+      }
+      .bottom-bar-inner {
+        max-width: 720px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .bottom-bar-info {
+        font-size: 13px;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+      .bottom-bar-info strong {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      /* ============================================================
+   MODAL
+   ============================================================ */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-overlay.visible {
+        display: flex;
+        animation: fadeIn 0.15s var(--ease);
+      }
+      .modal {
+        background: var(--surface-solid);
+        border-radius: 16px;
+        padding: 1.75rem 2rem;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: var(--shadow-xl);
+        animation: modalIn 0.25s var(--ease-spring);
+        text-align: center;
+      }
+      .modal-icon {
+        width: 48px;
+        height: 48px;
+        background: var(--danger-soft);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 22px;
+      }
+      .modal h3 {
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.375rem;
+      }
+      .modal p {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-bottom: 1.25rem;
+        line-height: 1.5;
+      }
+      .modal .safe-note {
+        font-size: 12px;
+        color: var(--accent);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        margin-bottom: 1.25rem;
+      }
+      .modal .actions {
+        justify-content: center;
+      }
+
+      /* ============================================================
+   TOAST
+   ============================================================ */
+      .toast {
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: var(--text);
+        color: var(--bg);
+        padding: 0.625rem 1.25rem;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        font-size: 13.5px;
+        display: none;
+        z-index: 200;
+        box-shadow: var(--shadow-lg);
+        white-space: nowrap;
+      }
+      .toast.visible {
+        display: block;
+        animation: toastIn 0.3s var(--ease-spring) forwards;
+      }
+      .toast.error {
+        background: var(--danger);
+        color: #fff;
+      }
+
+      /* ============================================================
+   EMPTY STATE
+   ============================================================ */
+      .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-dim);
+      }
+      .empty-state .em-icon {
+        font-size: 36px;
+        margin-bottom: 0.75rem;
+      }
+      .empty-state h3 {
+        font-size: 16px;
+        color: var(--text-secondary);
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+      .empty-state p {
+        font-size: 13px;
+      }
+
+      /* ============================================================
+   UNINSTALL SECTION
+   ============================================================ */
+      #spotlightSection {
+        display: none;
+      }
+      #spotlightSection.visible {
+        display: block;
+        animation: fadeUp 0.3s var(--ease) both;
+      }
+
+      #uninstallSection {
+        display: none;
+      }
+      #uninstallSection.visible {
+        display: block;
+        animation: fadeUp 0.3s var(--ease) both;
+      }
+
+      .app-search {
+        width: 100%;
+        padding: 0.625rem 1rem 0.625rem 2.5rem;
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--radius-sm);
+        font-family: var(--font);
+        font-size: 14px;
+        background: var(--surface-solid);
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.15s var(--ease);
+        margin-bottom: 1rem;
+      }
+      .app-search:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+      }
+      .app-search-wrap {
+        position: relative;
+      }
+      .app-search-wrap svg {
+        position: absolute;
+        left: 0.875rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-dim);
+        pointer-events: none;
+        margin-top: -0.5rem;
+      }
+      .app-search-count {
+        font-size: 12px;
+        color: var(--text-dim);
+        text-align: right;
+        margin-top: -0.75rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .app-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        max-height: 480px;
+        overflow-y: auto;
+      }
+      .app-row {
+        display: grid;
+        grid-template-columns: 36px 1fr auto 24px;
+        gap: 0.625rem;
+        padding: 0.625rem 0.875rem;
+        background: var(--surface-solid);
+        align-items: center;
+        cursor: pointer;
+        transition: background 0.1s;
+      }
+      .app-row:hover {
+        background: #fafaf8;
+      }
+      .app-icon-placeholder {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: var(--bg2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+      .app-row-info h4 {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.3;
+      }
+      .app-row-info .app-bundle {
+        font-size: 11.5px;
+        color: var(--text-dim);
+        font-family: var(--mono);
+      }
+      .app-row-size {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+      .app-row-chevron {
+        color: var(--text-dim);
+        display: flex;
+        align-items: center;
+      }
+
+      /* App detail panel */
+      #appDetailPanel {
+        display: none;
+      }
+      #appDetailPanel.visible {
+        display: block;
+        animation: fadeUp 0.3s var(--ease) both;
+      }
+      .app-detail-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+      }
+      .app-detail-header .app-icon-placeholder {
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+      }
+      .app-detail-header h3 {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .app-detail-header .app-detail-path {
+        font-size: 12px;
+        color: var(--text-dim);
+        font-family: var(--mono);
+      }
+      .app-data-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        margin-bottom: 1rem;
+      }
+      .app-data-row {
+        display: grid;
+        grid-template-columns: 28px 1fr auto;
+        gap: 0.5rem;
+        padding: 0.6rem 0.875rem;
+        background: var(--surface-solid);
+        align-items: center;
+        font-size: 13px;
+      }
+      .app-data-row .path-main {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .app-data-row .size-cell {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+      .app-detail-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        background: var(--surface-solid);
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--radius-sm);
+      }
+      .app-detail-summary .total-label {
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+      .app-detail-summary .total-size {
+        font-family: var(--mono);
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .app-detail-actions {
+        display: flex;
+        gap: 0.625rem;
+        justify-content: center;
+      }
+      .uninstall-spinner {
+        display: none;
+        text-align: center;
+        padding: 3rem 1rem;
+      }
+      .uninstall-spinner.visible {
+        display: block;
+        animation: fadeUp 0.3s var(--ease) both;
+      }
+
+      /* ============================================================
+   ANIMATIONS
+   ============================================================ */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes modalIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95) translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+      @keyframes toastIn {
+        from {
+          transform: translateX(-50%) translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(-50%) translateY(0);
+          opacity: 1;
+        }
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes cardIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Select section visibility */
+      #selectSection {
+        display: none;
+      }
+      #selectSection.visible {
+        display: block;
+        animation: fadeUp 0.4s var(--ease) both;
+      }
+
+      .scanner-card {
+        animation: cardIn 0.35s var(--ease) both;
+      }
+      .scanner-card:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .scanner-card:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .scanner-card:nth-child(3) {
+        animation-delay: 0.15s;
+      }
+      .scanner-card:nth-child(4) {
+        animation-delay: 0.2s;
+      }
+      .scanner-card:nth-child(5) {
+        animation-delay: 0.25s;
+      }
+      .scanner-card:nth-child(6) {
+        animation-delay: 0.3s;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="topbar-brand">
+          <div class="topbar-icon">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M12 2l1.09 3.26L16 6l-2.91.74L12 10l-1.09-3.26L8 6l2.91-.74L12 2z"
+              />
+              <path
+                d="M5 15l.55 1.64L7 17.18l-1.45.37L5 19.18l-.55-1.63L3 17.18l1.45-.37L5 15z"
+              />
+              <path
+                d="M19 11l.55 1.64L21 13.18l-1.45.37L19 15.18l-.55-1.63L17 13.18l1.45-.37L19 11z"
+              />
+            </svg>
+          </div>
+          <span class="topbar-title">Clean Up</span>
+        </div>
+        <nav class="topbar-nav">
+          <button class="topbar-nav-btn active" onclick="switchMode('clean')">
+            Clean Up
+          </button>
+          <button class="topbar-nav-btn" onclick="switchMode('uninstall')">
+            Uninstall Apps
+          </button>
+          <button class="topbar-nav-btn" onclick="switchMode('spotlight')">
+            Reindex Spotlight
+          </button>
+        </nav>
+        <div class="topbar-spacer"></div>
+        <div class="topbar-meta">
+          <span class="topbar-version" id="versionTag">loading...</span>
+          <div class="topbar-sep"></div>
+          <button class="quit-btn" onclick="quitApp()">Quit</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="dry-run-banner" id="dryRunBanner">
+        Dry Run Mode — no files will be moved to Trash
+      </div>
+
+      <!-- Step 1: Scanner Selection -->
+      <section id="selectSection" class="visible">
+        <div class="hero">
+          <h1>What should we clean?</h1>
+          <p>Select categories to scan for reclaimable disk space.</p>
+          <div class="hero-safe">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            Everything goes to Trash — always recoverable
+          </div>
+        </div>
+        <div class="scanner-toggle-row">
+          <button
+            class="scanner-toggle-btn"
+            id="scannerToggleBtn"
+            onclick="toggleAllScanners()"
+          >
+            Deselect All
+          </button>
+        </div>
+        <div class="scanner-grid" id="scannerGrid"></div>
+        <div class="actions">
+          <button class="btn btn-primary" id="scanBtn" onclick="runScan()">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            Scan Selected
+          </button>
+        </div>
+      </section>
+
+      <!-- Scanning Spinner -->
+      <div class="spinner-wrap" id="spinnerWrap">
+        <div class="scan-anim">
+          <div class="ring"></div>
+          <div class="ring"></div>
+        </div>
+        <p>Scanning your system</p>
+        <span class="scan-hint">This may take a moment</span>
+      </div>
+
+      <!-- Spotlight Reindex Section -->
+      <section id="spotlightSection">
+        <div class="hero" style="margin-top: 0">
+          <h1>Reindex Spotlight</h1>
+          <p>Rebuild the Spotlight index to clear stale entries.</p>
+        </div>
+
+        <!-- Status indicator -->
+        <div class="spotlight-status" id="spotlightStatus">
+          <div class="spotlight-status-icon" id="spotlightStatusIcon">
+            <div class="status-dot"></div>
+          </div>
+          <div class="spotlight-status-text">
+            <span class="spotlight-status-label" id="spotlightStatusLabel"
+              >Checking status&hellip;</span
+            >
+            <span
+              class="spotlight-status-detail"
+              id="spotlightStatusDetail"
+            ></span>
+          </div>
+        </div>
+
+        <div class="spotlight-card" id="spotlightCard">
+          <div class="spotlight-card-header">
+            <div class="spotlight-icon">&#128269;</div>
+            Rebuild Spotlight index
+          </div>
+          If old app names or features still appear in Spotlight search, you can
+          rebuild the index right here. You'll be prompted for your admin
+          password.
+          <div class="spotlight-actions">
+            <button
+              class="btn btn-secondary btn-sm"
+              id="spotlightBtn"
+              onclick="reindexSpotlight()"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21.5 2v6h-6" />
+                <path d="M21.34 15.57a10 10 0 11-.57-8.38" />
+              </svg>
+              Reindex Spotlight
+            </button>
+          </div>
+          <div class="spotlight-note">
+            Takes ~10-30 min. CPU usage will be higher while indexing.
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Results -->
+      <section class="results-section" id="resultsSection">
+        <div class="results-bar">
+          <div class="results-bar-left">
+            <h2 id="resultsTitle">Results</h2>
+            <span class="summary" id="resultsSummary"></span>
+            <span
+              class="summary"
+              id="resultsScannedLabel"
+              style="margin-top: 2px"
+            ></span>
+          </div>
+          <div class="results-bar-right">
+            <button class="btn btn-secondary" onclick="goBack()">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              Back
+            </button>
+            <label class="select-all-label">
+              <input
+                type="checkbox"
+                id="selectAll"
+                onchange="toggleAll(this.checked)"
+                checked
+              />
+              All
+            </label>
+          </div>
+        </div>
+
+        <div class="results-groups" id="resultsGroups"></div>
+
+        <div id="emptyResults" class="empty-state" style="display: none">
+          <div class="em-icon">&#10024;</div>
+          <h3>All clean!</h3>
+          <p>No more items to review.</p>
+        </div>
+      </section>
+
+      <!-- Uninstall Apps Section -->
+      <section id="uninstallSection">
+        <div class="hero" style="margin-top: 0">
+          <h1>Uninstall an App</h1>
+          <p>Remove an app and all its associated data.</p>
+        </div>
+
+        <!-- App loading spinner -->
+        <div class="uninstall-spinner" id="appSpinner">
+          <div class="scan-anim">
+            <div class="ring"></div>
+            <div class="ring"></div>
+          </div>
+          <p>Loading installed apps</p>
+          <span class="scan-hint">Scanning Applications folder</span>
+        </div>
+
+        <!-- App list view -->
+        <div id="appListView" style="display: none">
+          <div class="app-search-wrap">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              class="app-search"
+              id="appSearch"
+              placeholder="Search apps..."
+              oninput="renderAppList(this.value)"
+            />
+          </div>
+          <div class="app-search-count" id="appSearchCount"></div>
+          <div class="app-list" id="appListBody"></div>
+        </div>
+
+        <!-- App detail view -->
+        <div id="appDetailPanel">
+          <div class="app-detail-header">
+            <div class="app-icon-placeholder" id="detailIcon"></div>
+            <div>
+              <h3 id="detailAppName"></h3>
+              <div class="app-detail-path" id="detailAppPath"></div>
+            </div>
+          </div>
+
+          <div class="app-detail-summary" id="detailSummary">
+            <span class="total-label">Total size (app + data)</span>
+            <span class="total-size" id="detailTotalSize"></span>
+          </div>
+
+          <div class="app-data-list" id="appDataList"></div>
+
+          <div class="app-detail-actions">
+            <button class="btn btn-secondary" onclick="backToAppList()">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              Back
+            </button>
+            <button
+              class="btn btn-danger"
+              id="uninstallBtn"
+              onclick="doUninstall()"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M8 6V4h8v2" />
+                <path d="M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6" />
+              </svg>
+              Uninstall (Move to Trash)
+            </button>
+          </div>
+        </div>
+
+        <!-- Detail loading spinner -->
+        <div class="uninstall-spinner" id="detailSpinner">
+          <div class="scan-anim">
+            <div class="ring"></div>
+            <div class="ring"></div>
+          </div>
+          <p>Scanning app data</p>
+          <span class="scan-hint">Checking Library folders</span>
+        </div>
+      </section>
+
+      <!-- Confirm Modal -->
+      <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+          <div class="modal-icon">&#128465;</div>
+          <h3 id="confirmTitle">Confirm</h3>
+          <p id="confirmBody"></p>
+          <div class="safe-note">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            Items can be recovered from Trash
+          </div>
+          <div class="actions">
+            <button class="btn btn-secondary" onclick="hideConfirm()">
+              Cancel
+            </button>
+            <button class="btn btn-danger" id="confirmBtn" onclick="doTrash()">
+              Move to Trash
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast -->
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <!-- Bottom Action Bar (shown when results are visible) -->
+    <div class="bottom-bar" id="bottomBar">
+      <div class="bottom-bar-inner">
+        <span class="bottom-bar-info" id="bottomInfo">
+          <strong>0</strong> items selected &middot; <strong>0 B</strong>
+        </span>
+        <button class="btn btn-danger" id="trashBtn" onclick="showConfirm()">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 6h18" />
+            <path d="M8 6V4h8v2" />
+            <path d="M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6" />
+          </svg>
+          Move to Trash
+        </button>
+      </div>
+    </div>
+
+    <script>
+      // =========================================================================
+      // State
+      // =========================================================================
+      let scanners = [];
+      let findings = [];
+      let sortField = "size";
+      let sortAsc = false;
+      let isDryRun = false;
+
+      // Uninstall state
+      let currentMode = "clean"; // 'clean' | 'uninstall'
+      let appsList = [];
+      let appsLoaded = false;
+      let selectedApp = null;
+      let selectedAppData = [];
+      let lastScannedNames = [];
+
+      const SCANNER_ICONS = {
+        "dev-artifacts": { icon: "&#128295;", cls: "icon-dev" },
+        "system-caches": { icon: "&#128190;", cls: "icon-cache" },
+        "app-leftovers": { icon: "&#128230;", cls: "icon-app" },
+        "large-old-files": { icon: "&#128194;", cls: "icon-large" },
+        "unused-apps": { icon: "&#128683;", cls: "icon-unused" },
+        "homebrew-cleanup": { icon: "&#127866;", cls: "icon-brew" },
+      };
+
+      // =========================================================================
+      // Init
+      // =========================================================================
+      (async function init() {
+        try {
+          const [scannersRes, dryRunRes, versionRes] = await Promise.all([
+            fetch("/api/scanners").then((r) => r.json()),
+            fetch("/api/dry-run").then((r) => r.json()),
+            fetch("/api/version").then((r) => r.json()),
+          ]);
+          scanners = scannersRes;
+          isDryRun = dryRunRes.dryRun;
+
+          const tag = document.getElementById("versionTag");
+          try {
+            if (versionRes.version) {
+              let display = "v" + versionRes.version;
+              if (versionRes.built) {
+                const built = new Date(versionRes.built);
+                if (!isNaN(built.getTime())) {
+                  const ts =
+                    built.toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    }) +
+                    " " +
+                    built.toLocaleTimeString(undefined, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                  display = "v" + versionRes.version + " \u00b7 " + ts;
+                }
+              }
+              tag.textContent = display;
+            } else {
+              tag.textContent = "";
+            }
+          } catch (e) {
+            console.warn("Version display error:", e);
+            tag.textContent = "";
+          }
+
+          if (isDryRun) {
+            document.getElementById("dryRunBanner").classList.add("visible");
+            document.getElementById("trashBtn").style.display = "none";
+          }
+          renderScannerCards();
+        } catch (err) {
+          console.error("Init failed:", err);
+          document.getElementById("versionTag").textContent = "";
+          // Still try to render scanner cards if scanners loaded
+          if (scanners.length > 0) renderScannerCards();
+        }
+      })();
+
+      // =========================================================================
+      // Scanner Cards
+      // =========================================================================
+      function renderScannerCards() {
+        const grid = document.getElementById("scannerGrid");
+        grid.innerHTML = scanners
+          .map((s) => {
+            const ic = SCANNER_ICONS[s.id] || {
+              icon: "&#128196;",
+              cls: "icon-dev",
+            };
+            return `
+        <div class="scanner-card selected" data-id="${s.id}" onclick="toggleCard(this)">
+          <div class="scanner-card-top">
+            <div class="scanner-card-icon ${ic.cls}">${ic.icon}</div>
+            <div class="check-circle">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <h3>${esc(s.name)}</h3>
+          <p>${esc(s.description)}</p>
+        </div>`;
+          })
+          .join("");
+      }
+
+      function toggleCard(el) {
+        el.classList.toggle("selected");
+        updateScanBtn();
+        updateScannerToggleLabel();
+      }
+
+      function updateScanBtn() {
+        const n = document.querySelectorAll(".scanner-card.selected").length;
+        document.getElementById("scanBtn").disabled = n === 0;
+      }
+
+      function toggleAllScanners() {
+        const cards = document.querySelectorAll(".scanner-card");
+        const allSelected = [...cards].every((c) =>
+          c.classList.contains("selected"),
+        );
+        cards.forEach((c) => {
+          if (allSelected) c.classList.remove("selected");
+          else c.classList.add("selected");
+        });
+        updateScanBtn();
+        updateScannerToggleLabel();
+      }
+
+      function updateScannerToggleLabel() {
+        const cards = document.querySelectorAll(".scanner-card");
+        const allSelected = [...cards].every((c) =>
+          c.classList.contains("selected"),
+        );
+        document.getElementById("scannerToggleBtn").textContent = allSelected
+          ? "Deselect All"
+          : "Select All";
+      }
+
+      // Spotlight status polling
+      let spotlightPollTimer = null;
+
+      async function checkSpotlightStatus() {
+        try {
+          const res = await fetch("/api/spotlight-status");
+          const data = await res.json();
+          const el = document.getElementById("spotlightStatus");
+          const label = document.getElementById("spotlightStatusLabel");
+          const detail = document.getElementById("spotlightStatusDetail");
+
+          el.classList.remove("idle", "indexing");
+
+          if (data.indexing) {
+            el.classList.add("indexing");
+            label.textContent = "Indexing in progress";
+            detail.textContent =
+              "Spotlight is rebuilding — this may take 10-30 min";
+            startSpotlightPoll();
+          } else if (data.enabled) {
+            el.classList.add("idle");
+            label.textContent = "Spotlight is up to date";
+            detail.textContent = "Index is ready — search should work normally";
+            stopSpotlightPoll();
+          } else {
+            label.textContent = "Spotlight is disabled";
+            detail.textContent = "";
+            stopSpotlightPoll();
+          }
+        } catch {
+          const label = document.getElementById("spotlightStatusLabel");
+          label.textContent = "Could not check status";
+          document.getElementById("spotlightStatusDetail").textContent = "";
+        }
+      }
+
+      function startSpotlightPoll() {
+        if (spotlightPollTimer) return;
+        spotlightPollTimer = setInterval(checkSpotlightStatus, 10000);
+      }
+
+      function stopSpotlightPoll() {
+        if (spotlightPollTimer) {
+          clearInterval(spotlightPollTimer);
+          spotlightPollTimer = null;
+        }
+      }
+
+      async function reindexSpotlight() {
+        const btn = document.getElementById("spotlightBtn");
+        btn.disabled = true;
+        const origHTML = btn.innerHTML;
+        btn.innerHTML =
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 11-.57-8.38"/></svg> Requesting access\u2026';
+        try {
+          const res = await fetch("/api/reindex-spotlight", { method: "POST" });
+          const data = await res.json();
+          if (data.ok) {
+            toast("Spotlight reindex started — takes ~10-30 min");
+            // Immediately refresh status and start polling
+            await checkSpotlightStatus();
+          } else if (data.error === "cancelled") {
+            // User cancelled the password dialog — no toast needed
+          } else {
+            toast("Reindex failed: " + (data.error || "unknown error"), true);
+          }
+        } catch (err) {
+          toast("Reindex failed: " + err.message, true);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = origHTML;
+        }
+      }
+
+      // =========================================================================
+      // Scan
+      // =========================================================================
+      async function runScan() {
+        const ids = [
+          ...document.querySelectorAll(".scanner-card.selected"),
+        ].map((el) => el.dataset.id);
+        if (ids.length === 0) return;
+
+        show("spinnerWrap");
+        hide("selectSection");
+        hide("resultsSection");
+        document.getElementById("bottomBar").classList.remove("visible");
+
+        try {
+          const results = await fetch("/api/scan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scannerIds: ids }),
+          }).then((r) => r.json());
+
+          lastScannedNames = results.map((r) => r.scannerName);
+          findings = results.flatMap((r) =>
+            r.findings.map((f) => ({ ...f, scannerName: r.scannerName })),
+          );
+          sortField = "size";
+          sortAsc = false;
+
+          if (findings.length === 0) {
+            hide("spinnerWrap");
+            show("resultsSection");
+            document.getElementById("resultsGroups").style.display = "none";
+            document.getElementById("emptyResults").style.display = "block";
+            document.getElementById("resultsTitle").textContent = "All clean!";
+            document.getElementById("resultsSummary").textContent =
+              "Nothing to clean up.";
+            return;
+          }
+
+          renderResults();
+        } catch (err) {
+          toast("Scan failed: " + err.message, true);
+        } finally {
+          hide("spinnerWrap");
+        }
+      }
+
+      // =========================================================================
+      // Results Rendering
+      // =========================================================================
+      function renderResults() {
+        sortFindings();
+
+        document.getElementById("resultsGroups").style.display = "";
+        document.getElementById("emptyResults").style.display = "none";
+
+        const total = findings.reduce((s, f) => s + f.size, 0);
+        document.getElementById("resultsTitle").textContent =
+          `${findings.length} items found`;
+        document.getElementById("resultsSummary").textContent =
+          `${fmtBytes(total)} reclaimable`;
+        document.getElementById("resultsScannedLabel").textContent =
+          lastScannedNames.length > 0
+            ? "Scanned: " + lastScannedNames.join(", ")
+            : "";
+
+        // Group findings by scannerName
+        const groups = new Map();
+        findings.forEach((f, i) => {
+          if (!groups.has(f.scannerName)) {
+            groups.set(f.scannerName, []);
+          }
+          groups.get(f.scannerName).push({ ...f, _idx: i });
+        });
+
+        const container = document.getElementById("resultsGroups");
+        let html = "";
+
+        for (const [scannerName, items] of groups) {
+          const groupSize = items.reduce((s, f) => s + f.size, 0);
+          // Find the scanner icon info
+          const scannerId =
+            scanners.find((s) => s.name === scannerName)?.id || "";
+          const ic = SCANNER_ICONS[scannerId] || {
+            icon: "&#128196;",
+            cls: "icon-dev",
+          };
+
+          html += `<div class="results-group">
+            <div class="results-group-header">
+              <div class="results-group-icon ${ic.cls}">${ic.icon}</div>
+              <div class="results-group-info">
+                <div class="results-group-name">${esc(scannerName)}</div>
+                <div class="results-group-meta">${items.length} item${items.length === 1 ? "" : "s"}</div>
+              </div>
+              <div class="results-group-size">${fmtBytes(groupSize)}</div>
+            </div>
+            <div class="results-list-header">
+              <span></span>
+              <span data-sort="path" onclick="sortBy('path')">File <span class="arrow"></span></span>
+              <span data-sort="size" onclick="sortBy('size')" style="justify-content:flex-end">Size <span class="arrow"></span></span>
+              <span data-sort="age" onclick="sortBy('age')" style="justify-content:flex-end">Age <span class="arrow"></span></span>
+            </div>`;
+
+          for (const f of items) {
+            html += `<div class="result-row">
+              <input type="checkbox" data-idx="${f._idx}" checked onchange="onCheck()">
+              <div class="path-cell">
+                <span class="path-main" title="${esc(f.path)}">${esc(truncPath(f.path))}</span>
+                <div class="path-meta">
+                  ${f.effort === "reinstall" ? '<span class="badge badge-warn">Reinstall needed</span>' : ""}
+                  <span class="badge">${esc(f.reason)}</span>
+                </div>
+              </div>
+              <span class="size-cell">${fmtBytes(f.size)}</span>
+              <span class="age-cell">${fmtAge(f.age)}</span>
+            </div>`;
+          }
+
+          html += `</div>`;
+        }
+
+        container.innerHTML = html;
+        updateSortHeaders();
+        document.getElementById("selectAll").checked = true;
+        show("resultsSection");
+        if (!isDryRun)
+          document.getElementById("bottomBar").classList.add("visible");
+        updateBottomBar();
+      }
+
+      function sortFindings() {
+        const dir = sortAsc ? 1 : -1;
+        findings.sort((a, b) => {
+          let va, vb;
+          switch (sortField) {
+            case "scanner":
+              va = a.scannerName;
+              vb = b.scannerName;
+              break;
+            case "path":
+              va = a.path;
+              vb = b.path;
+              break;
+            case "size":
+              va = a.size;
+              vb = b.size;
+              break;
+            case "age":
+              va = a.age;
+              vb = b.age;
+              break;
+            case "reason":
+              va = a.reason;
+              vb = b.reason;
+              break;
+            default:
+              return 0;
+          }
+          if (typeof va === "string") return va.localeCompare(vb) * dir;
+          return (va - vb) * dir;
+        });
+      }
+
+      function sortBy(field) {
+        if (sortField === field) sortAsc = !sortAsc;
+        else {
+          sortField = field;
+          sortAsc =
+            field === "path" || field === "scanner" || field === "reason";
+        }
+        renderResults();
+      }
+
+      function updateSortHeaders() {
+        document
+          .querySelectorAll(".results-list-header span[data-sort]")
+          .forEach((el) => {
+            const f = el.dataset.sort;
+            const arrow = el.querySelector(".arrow");
+            el.classList.toggle("sorted", f === sortField);
+            arrow.textContent =
+              f === sortField ? (sortAsc ? "\u25B2" : "\u25BC") : "";
+          });
+      }
+
+      // =========================================================================
+      // Selection
+      // =========================================================================
+      function toggleAll(checked) {
+        document
+          .querySelectorAll("#resultsGroups input[type=checkbox]")
+          .forEach((cb) => (cb.checked = checked));
+        updateBottomBar();
+      }
+
+      function onCheck() {
+        const boxes = document.querySelectorAll(
+          "#resultsGroups input[type=checkbox]",
+        );
+        const allChecked = [...boxes].every((cb) => cb.checked);
+        document.getElementById("selectAll").checked = allChecked;
+        updateBottomBar();
+      }
+
+      function getSelectedFindings() {
+        const boxes = document.querySelectorAll(
+          "#resultsGroups input[type=checkbox]",
+        );
+        return [...boxes]
+          .filter((cb) => cb.checked)
+          .map((cb) => findings[+cb.dataset.idx]);
+      }
+
+      function updateBottomBar() {
+        const sel = getSelectedFindings();
+        const size = sel.reduce((s, f) => s + f.size, 0);
+        document.getElementById("bottomInfo").innerHTML =
+          `<strong>${sel.length}</strong> item${sel.length === 1 ? "" : "s"} selected &middot; <strong>${fmtBytes(size)}</strong>`;
+        const tb = document.getElementById("trashBtn");
+        if (tb) tb.disabled = sel.length === 0;
+      }
+
+      // =========================================================================
+      // Confirm + Trash
+      // =========================================================================
+      function showConfirm() {
+        const sel = getSelectedFindings();
+        if (sel.length === 0) {
+          toast("Nothing selected", true);
+          return;
+        }
+        const size = sel.reduce((s, f) => s + f.size, 0);
+        document.getElementById("confirmTitle").textContent =
+          `Move ${sel.length} item${sel.length === 1 ? "" : "s"} to Trash?`;
+        document.getElementById("confirmBody").textContent =
+          `This will free approximately ${fmtBytes(size)}.`;
+        document.getElementById("confirmModal").classList.add("visible");
+      }
+
+      function hideConfirm() {
+        document.getElementById("confirmModal").classList.remove("visible");
+      }
+
+      async function doTrash() {
+        hideConfirm();
+        const sel = getSelectedFindings();
+        const paths = sel.map((f) => f.path);
+
+        const tb = document.getElementById("trashBtn");
+        tb.disabled = true;
+        const origHTML = tb.innerHTML;
+        tb.textContent = "Moving\u2026";
+
+        try {
+          const res = await fetch("/api/trash", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paths }),
+          }).then((r) => r.json());
+
+          if (res.error) {
+            toast(res.error, true);
+            return;
+          }
+
+          const ok = res.results.filter((r) => r.success).length;
+          const fail = res.results.filter((r) => !r.success).length;
+
+          const trashedPaths = new Set(
+            res.results.filter((r) => r.success).map((r) => r.path),
+          );
+          findings = findings.filter((f) => !trashedPaths.has(f.path));
+
+          if (findings.length > 0) {
+            renderResults();
+          } else {
+            hide("resultsSection");
+            document.getElementById("bottomBar").classList.remove("visible");
+            show("selectSection");
+          }
+
+          let msg = `Moved ${ok} item${ok === 1 ? "" : "s"} to Trash`;
+          if (fail > 0) msg += ` (${fail} failed)`;
+          toast(msg, fail > 0);
+        } catch (err) {
+          toast("Trash failed: " + err.message, true);
+        } finally {
+          tb.disabled = false;
+          tb.innerHTML = origHTML;
+        }
+      }
+
+      // =========================================================================
+      // Navigation
+      // =========================================================================
+      function goBack() {
+        hide("resultsSection");
+        document.getElementById("bottomBar").classList.remove("visible");
+        show("selectSection");
+      }
+
+      async function quitApp() {
+        try {
+          await fetch("/api/quit", { method: "POST" });
+        } catch {}
+        document.body.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:DM Sans,system-ui;color:#a8a29e;flex-direction:column;gap:0.5rem">' +
+          '<div style="font-size:28px">&#9995;</div>' +
+          '<p style="font-size:15px;font-weight:500">Server stopped. You can close this tab.</p></div>';
+      }
+
+      // =========================================================================
+      // Uninstall Mode
+      // =========================================================================
+      function switchMode(mode) {
+        if (mode === currentMode) return;
+        currentMode = mode;
+
+        // Update topbar nav buttons
+        const modeMap = {
+          clean: "clean",
+          uninstall: "uninstall",
+          spotlight: "reindex",
+        };
+        document.querySelectorAll(".topbar-nav-btn").forEach((btn) => {
+          const text = btn.textContent.trim().toLowerCase();
+          btn.classList.toggle("active", text.includes(modeMap[mode]));
+        });
+
+        // Hide all sections first
+        hide("selectSection");
+        hide("resultsSection");
+        hide("spinnerWrap");
+        document.getElementById("bottomBar").classList.remove("visible");
+        document.getElementById("uninstallSection").classList.remove("visible");
+        document.getElementById("spotlightSection").classList.remove("visible");
+        stopSpotlightPoll();
+
+        if (mode === "clean") {
+          // Show whichever clean-mode section was active
+          if (findings.length > 0) {
+            show("resultsSection");
+            if (!isDryRun)
+              document.getElementById("bottomBar").classList.add("visible");
+          } else {
+            show("selectSection");
+          }
+        } else if (mode === "uninstall") {
+          document.getElementById("uninstallSection").classList.add("visible");
+          if (!appsLoaded) loadApps();
+        } else if (mode === "spotlight") {
+          document.getElementById("spotlightSection").classList.add("visible");
+          checkSpotlightStatus();
+        }
+      }
+
+      async function loadApps() {
+        document.getElementById("appSpinner").classList.add("visible");
+        document.getElementById("appListView").style.display = "none";
+        document.getElementById("appDetailPanel").classList.remove("visible");
+
+        try {
+          const res = await fetch("/api/apps");
+          appsList = await res.json();
+          appsLoaded = true;
+          document.getElementById("appSpinner").classList.remove("visible");
+          document.getElementById("appListView").style.display = "block";
+          renderAppList();
+        } catch (err) {
+          document.getElementById("appSpinner").classList.remove("visible");
+          toast("Failed to load apps: " + err.message, true);
+        }
+      }
+
+      function renderAppList(filter) {
+        const q = (filter || "").toLowerCase().trim();
+        const filtered = q
+          ? appsList.filter(
+              (a) =>
+                a.name.toLowerCase().includes(q) ||
+                a.bundleId.toLowerCase().includes(q),
+            )
+          : appsList;
+
+        document.getElementById("appSearchCount").textContent =
+          `${filtered.length} app${filtered.length === 1 ? "" : "s"}`;
+
+        const body = document.getElementById("appListBody");
+        if (filtered.length === 0) {
+          body.innerHTML = `<div style="padding:2rem;text-align:center;background:var(--surface-solid);color:var(--text-dim);font-size:14px">${q ? "No apps match your search" : "No apps found"}</div>`;
+          return;
+        }
+
+        body.innerHTML = filtered
+          .map((a, i) => {
+            const realIdx = appsList.indexOf(a);
+            return `<div class="app-row" onclick="selectApp(${realIdx})">
+                  ${appIconHtml(a.path, a.name, 36)}
+                  <div class="app-row-info">
+                    <h4>${esc(a.name)}</h4>
+                    <span class="app-bundle">${esc(a.bundleId)}</span>
+                  </div>
+                  <span class="app-row-size">${fmtBytes(a.appSize)}</span>
+                  <div class="app-row-chevron">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                </div>`;
+          })
+          .join("");
+      }
+
+      function appIconHtml(appPath, name, size) {
+        const sz = size || 36;
+        const cls = sz > 36 ? "app-icon-img large" : "app-icon-img";
+        const encoded = encodeURIComponent(appPath);
+        const safeName = esc(name).replace(/"/g, "&quot;");
+        return `<img class="${cls}" src="/api/app-icon?path=${encoded}" loading="lazy" onerror="iconFallback(this, '${sz}', &quot;${safeName}&quot;)" />`;
+      }
+
+      function iconFallback(img, sz, name) {
+        const div = document.createElement("div");
+        div.className = "app-icon-placeholder";
+        if (parseInt(sz) > 36) {
+          div.style.width = "48px";
+          div.style.height = "48px";
+          div.style.fontSize = "24px";
+        }
+        div.innerHTML = getAppEmoji(name);
+        img.replaceWith(div);
+      }
+
+      function getAppEmoji(name) {
+        const n = name.toLowerCase();
+        if (
+          n.includes("chrome") ||
+          n.includes("browser") ||
+          n.includes("firefox") ||
+          n.includes("safari")
+        )
+          return "&#127760;";
+        if (n.includes("code") || n.includes("studio") || n.includes("xcode"))
+          return "&#128187;";
+        if (
+          n.includes("slack") ||
+          n.includes("teams") ||
+          n.includes("zoom") ||
+          n.includes("discord")
+        )
+          return "&#128172;";
+        if (n.includes("music") || n.includes("spotify")) return "&#127925;";
+        if (n.includes("photo") || n.includes("image") || n.includes("figma"))
+          return "&#127912;";
+        if (n.includes("mail") || n.includes("outlook")) return "&#9993;";
+        return "&#128230;";
+      }
+
+      async function selectApp(idx) {
+        selectedApp = appsList[idx];
+        document.getElementById("appListView").style.display = "none";
+        document.getElementById("appDetailPanel").classList.remove("visible");
+        document.getElementById("detailSpinner").classList.add("visible");
+
+        try {
+          const res = await fetch("/api/app-data", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              bundleId: selectedApp.bundleId,
+              appName: selectedApp.name,
+            }),
+          });
+          selectedAppData = await res.json();
+        } catch (err) {
+          selectedAppData = [];
+          toast("Failed to scan app data: " + err.message, true);
+        }
+
+        document.getElementById("detailSpinner").classList.remove("visible");
+        renderAppDetail();
+      }
+
+      function renderAppDetail() {
+        document.getElementById("detailIcon").innerHTML = appIconHtml(
+          selectedApp.path,
+          selectedApp.name,
+          48,
+        );
+        document.getElementById("detailAppName").textContent = selectedApp.name;
+        document.getElementById("detailAppPath").textContent = selectedApp.path;
+
+        // App .app bundle row + associated data
+        const allItems = [
+          {
+            path: selectedApp.path,
+            label: "Application bundle",
+            size: selectedApp.appSize,
+          },
+          ...selectedAppData,
+        ];
+
+        const dataBody = document.getElementById("appDataList");
+        dataBody.innerHTML = allItems
+          .map(
+            (d, i) => `<div class="app-data-row">
+                  <input type="checkbox" data-idx="${i}" checked onchange="updateUninstallSummary()">
+                  <span class="path-main" title="${esc(d.path)}">${esc(d.label)}</span>
+                  <span class="size-cell">${fmtBytes(d.size)}</span>
+                </div>`,
+          )
+          .join("");
+
+        updateUninstallSummary();
+        document.getElementById("appDetailPanel").classList.add("visible");
+
+        if (isDryRun) {
+          document.getElementById("uninstallBtn").style.display = "none";
+        }
+      }
+
+      function updateUninstallSummary() {
+        const allItems = [{ size: selectedApp.appSize }, ...selectedAppData];
+        const boxes = document.querySelectorAll(
+          "#appDataList input[type=checkbox]",
+        );
+        let total = 0;
+        boxes.forEach((cb, i) => {
+          if (cb.checked) total += allItems[i].size;
+        });
+        document.getElementById("detailTotalSize").textContent =
+          fmtBytes(total);
+        const btn = document.getElementById("uninstallBtn");
+        btn.disabled = total === 0;
+      }
+
+      async function doUninstall() {
+        const allItems = [
+          {
+            path: selectedApp.path,
+            label: "Application bundle",
+            size: selectedApp.appSize,
+          },
+          ...selectedAppData,
+        ];
+        const boxes = document.querySelectorAll(
+          "#appDataList input[type=checkbox]",
+        );
+        const paths = [];
+        boxes.forEach((cb, i) => {
+          if (cb.checked) paths.push(allItems[i].path);
+        });
+
+        if (paths.length === 0) {
+          toast("Nothing selected", true);
+          return;
+        }
+
+        // Reuse confirm modal
+        const size = allItems.reduce(
+          (s, d, i) => s + (boxes[i].checked ? d.size : 0),
+          0,
+        );
+        document.getElementById("confirmTitle").textContent =
+          `Uninstall ${selectedApp.name}?`;
+        document.getElementById("confirmBody").textContent =
+          `This will move ${paths.length} item${paths.length === 1 ? "" : "s"} (${fmtBytes(size)}) to Trash.`;
+
+        // Temporarily override the confirm button
+        const confirmBtn = document.getElementById("confirmBtn");
+        const origOnclick = confirmBtn.onclick;
+        confirmBtn.onclick = async function () {
+          hideConfirm();
+          const btn = document.getElementById("uninstallBtn");
+          btn.disabled = true;
+          const origHTML = btn.innerHTML;
+          btn.textContent = "Moving\u2026";
+
+          try {
+            const res = await fetch("/api/trash", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paths }),
+            }).then((r) => r.json());
+
+            if (res.error) {
+              toast(res.error, true);
+              return;
+            }
+
+            const ok = res.results.filter((r) => r.success).length;
+            const fail = res.results.filter((r) => !r.success).length;
+            let msg = `Uninstalled ${selectedApp.name} (${ok} item${ok === 1 ? "" : "s"})`;
+            if (fail > 0) msg += ` — ${fail} failed`;
+            toast(msg, fail > 0);
+
+            // Remove app from list and go back
+            appsList = appsList.filter((a) => a !== selectedApp);
+            backToAppList();
+          } catch (err) {
+            toast("Uninstall failed: " + err.message, true);
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = origHTML;
+            confirmBtn.onclick = origOnclick;
+          }
+        };
+
+        document.getElementById("confirmModal").classList.add("visible");
+      }
+
+      function backToAppList() {
+        document.getElementById("appDetailPanel").classList.remove("visible");
+        document.getElementById("appListView").style.display = "block";
+        document.getElementById("appSearch").value = "";
+        renderAppList();
+      }
+
+      // =========================================================================
+      // Helpers
+      // =========================================================================
+      function show(id) {
+        document.getElementById(id).classList.add("visible");
+      }
+      function hide(id) {
+        document.getElementById(id).classList.remove("visible");
+      }
+
+      function esc(s) {
+        const d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      function truncPath(p) {
+        if (p.length <= 60) return p;
+        return p.slice(0, 25) + "\u2026" + p.slice(-32);
+      }
+
+      function fmtBytes(b) {
+        if (!b || !Number.isFinite(b) || b < 0) return "0 B";
+        const u = ["B", "KB", "MB", "GB", "TB"];
+        const i = Math.floor(Math.log(b) / Math.log(1024));
+        const v = b / Math.pow(1024, i);
+        return (
+          (v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)) +
+          " " +
+          u[i]
+        );
+      }
+
+      function fmtAge(ms) {
+        const d = Math.floor(ms / 86400000);
+        const y = Math.floor(d / 365);
+        const m = Math.floor(d / 30);
+        if (y > 0) return y + "y";
+        if (m > 0) return m + "mo";
+        if (d > 0) return d + "d";
+        const h = Math.floor(ms / 3600000);
+        if (h > 0) return h + "h";
+        return "<1h";
+      }
+
+      function toast(msg, isError) {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.toggle("error", !!isError);
+        el.classList.remove("visible");
+        void el.offsetWidth;
+        el.classList.add("visible");
+        setTimeout(() => el.classList.remove("visible"), 3000);
+      }
+    </script>
+  </body>
+</html>
