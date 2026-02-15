@@ -716,6 +716,35 @@
         margin-bottom: 1rem;
       }
 
+      .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+        margin-bottom: 1rem;
+      }
+      .filter-chip {
+        padding: 0.3rem 0.75rem;
+        border: 1.5px solid var(--border-strong);
+        border-radius: 999px;
+        font-family: var(--font);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s var(--ease);
+        background: var(--surface-solid);
+        color: var(--text-dim);
+        white-space: nowrap;
+      }
+      .filter-chip.active {
+        background: var(--accent-soft);
+        color: #065f46;
+        border-color: rgba(16, 185, 129, 0.3);
+      }
+      .filter-chip:not(.active):hover {
+        color: var(--text-secondary);
+        border-color: var(--border-strong);
+      }
+
       .results-group {
         border-radius: var(--radius);
         overflow: hidden;
@@ -1664,6 +1693,7 @@
           </div>
         </div>
 
+        <div class="filter-chips" id="filterChips"></div>
         <div class="results-groups" id="resultsGroups"></div>
 
         <div id="emptyResults" class="empty-state" style="display: none">
@@ -1857,6 +1887,7 @@
       let findings = [];
       let sortField = "size";
       let sortAsc = false;
+      let activeFilters = new Set();
       let isDryRun = false;
 
       // Uninstall state
@@ -2172,7 +2203,7 @@
             cls: "icon-dev",
           };
 
-          html += `<div class="results-group">
+          html += `<div class="results-group" data-scanner="${esc(scannerId)}">
             <div class="results-group-header">
               <div class="results-group-icon ${ic.cls}">${ic.icon}</div>
               <div class="results-group-info">
@@ -2212,6 +2243,8 @@
         show("resultsSection");
         if (!isDryRun)
           document.getElementById("bottomBar").classList.add("visible");
+        renderFilterChips();
+        applyFilters();
         updateBottomBar();
       }
 
@@ -2271,20 +2304,122 @@
       }
 
       // =========================================================================
+      // Filter Chips
+      // =========================================================================
+      function renderFilterChips() {
+        const groups = document.querySelectorAll(
+          "#resultsGroups .results-group",
+        );
+        const scannerIds = [];
+        const scannerCounts = new Map();
+        groups.forEach((g) => {
+          const sid = g.dataset.scanner;
+          if (!scannerCounts.has(sid)) {
+            scannerIds.push(sid);
+            scannerCounts.set(sid, 0);
+          }
+          const rows = g.querySelectorAll(".result-row");
+          scannerCounts.set(sid, scannerCounts.get(sid) + rows.length);
+        });
+
+        if (scannerIds.length <= 1) {
+          document.getElementById("filterChips").innerHTML = "";
+          activeFilters = new Set(scannerIds);
+          return;
+        }
+
+        // If no active filters yet (fresh render), default to all
+        if (activeFilters.size === 0) {
+          activeFilters = new Set(scannerIds);
+        }
+
+        const allActive = scannerIds.every((id) => activeFilters.has(id));
+        let html = `<button class="filter-chip${allActive ? " active" : ""}" data-filter="all" onclick="toggleFilter('all')">All (${findings.length})</button>`;
+
+        for (const sid of scannerIds) {
+          const scanner = scanners.find((s) => s.id === sid);
+          const name = scanner ? scanner.name : sid;
+          const count = scannerCounts.get(sid);
+          const isActive = activeFilters.has(sid);
+          html += `<button class="filter-chip${isActive ? " active" : ""}" data-filter="${esc(sid)}" onclick="toggleFilter('${esc(sid)}')">${esc(name)} (${count})</button>`;
+        }
+
+        document.getElementById("filterChips").innerHTML = html;
+      }
+
+      function toggleFilter(filterId) {
+        const allScannerIds = [
+          ...document.querySelectorAll("#resultsGroups .results-group"),
+        ].map((g) => g.dataset.scanner);
+        const uniqueIds = [...new Set(allScannerIds)];
+
+        if (filterId === "all") {
+          // Toggle all on
+          activeFilters = new Set(uniqueIds);
+        } else {
+          if (activeFilters.has(filterId)) {
+            activeFilters.delete(filterId);
+          } else {
+            activeFilters.add(filterId);
+          }
+          // If nothing active, revert to all
+          if (activeFilters.size === 0) {
+            activeFilters = new Set(uniqueIds);
+          }
+        }
+
+        applyFilters();
+        renderFilterChips();
+        updateBottomBar();
+      }
+
+      function applyFilters() {
+        const groups = document.querySelectorAll(
+          "#resultsGroups .results-group",
+        );
+        let visibleItems = 0;
+        let visibleSize = 0;
+
+        groups.forEach((g) => {
+          const sid = g.dataset.scanner;
+          const visible = activeFilters.has(sid);
+          g.style.display = visible ? "" : "none";
+          if (visible) {
+            g.querySelectorAll(".result-row input[type=checkbox]").forEach(
+              (cb) => {
+                visibleItems++;
+                visibleSize += findings[+cb.dataset.idx].size;
+              },
+            );
+          }
+        });
+
+        document.getElementById("resultsTitle").textContent =
+          activeFilters.size ===
+          [...new Set([...groups].map((g) => g.dataset.scanner))].length
+            ? `${findings.length} items found`
+            : `${visibleItems} of ${findings.length} items`;
+        document.getElementById("resultsSummary").textContent =
+          `${fmtBytes(visibleSize)} reclaimable`;
+      }
+
+      // =========================================================================
       // Selection
       // =========================================================================
+      function getVisibleCheckboxes() {
+        return [...document.querySelectorAll("#resultsGroups .results-group")]
+          .filter((g) => g.style.display !== "none")
+          .flatMap((g) => [...g.querySelectorAll("input[type=checkbox]")]);
+      }
+
       function toggleAll(checked) {
-        document
-          .querySelectorAll("#resultsGroups input[type=checkbox]")
-          .forEach((cb) => (cb.checked = checked));
+        getVisibleCheckboxes().forEach((cb) => (cb.checked = checked));
         updateBottomBar();
       }
 
       function onCheck() {
-        const boxes = document.querySelectorAll(
-          "#resultsGroups input[type=checkbox]",
-        );
-        const allChecked = [...boxes].every((cb) => cb.checked);
+        const boxes = getVisibleCheckboxes();
+        const allChecked = boxes.length > 0 && boxes.every((cb) => cb.checked);
         document.getElementById("selectAll").checked = allChecked;
         updateBottomBar();
       }
@@ -2383,6 +2518,8 @@
       function goBack() {
         hide("resultsSection");
         document.getElementById("bottomBar").classList.remove("visible");
+        activeFilters = new Set();
+        document.getElementById("filterChips").innerHTML = "";
         show("selectSection");
       }
 
