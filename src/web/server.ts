@@ -15,6 +15,10 @@ import { getInstalledAppsList, getAppAssociatedData } from "../utils/apps";
 // In-memory cache for app icon PNGs (path -> Buffer|null)
 const iconCache = new Map<string, Buffer | null>();
 
+// Track when reindex was last triggered so we don't report "up to date"
+// before Spotlight actually starts indexing (race condition with mdutil -s)
+let lastReindexTime = 0;
+
 async function getAppIconPng(appPath: string): Promise<Buffer | null> {
   if (iconCache.has(appPath)) return iconCache.get(appPath)!;
 
@@ -261,6 +265,7 @@ export async function startWebServer(options: CliOptions): Promise<void> {
           });
           const exitCode = await proc.exited;
           if (exitCode === 0) {
+            lastReindexTime = Date.now();
             return Response.json({ ok: true });
           }
           const stderr = new TextDecoder().decode(
@@ -293,8 +298,26 @@ export async function startWebServer(options: CliOptions): Promise<void> {
           // Typical output:
           //   /: Indexing enabled.
           //   /: Indexing and calculation in progress.  (or just "Indexing enabled.")
-          const indexing = /indexing/i.test(output) && /progress/i.test(output);
+          let indexing = /indexing/i.test(output) && /progress/i.test(output);
           const enabled = /enabled/i.test(output);
+
+          // Grace period: if we recently triggered a reindex but mdutil -s
+          // doesn't show "in progress" yet, report indexing anyway. Spotlight
+          // can take several seconds to start after mdutil -E returns.
+          const GRACE_MS = 5 * 60 * 1000; // 5 minutes
+          if (
+            !indexing &&
+            lastReindexTime > 0 &&
+            Date.now() - lastReindexTime < GRACE_MS
+          ) {
+            indexing = true;
+          }
+          // Clear the flag once Spotlight confirms it's no longer indexing
+          // and the grace period is over
+          if (!indexing && lastReindexTime > 0) {
+            lastReindexTime = 0;
+          }
+
           return Response.json({ indexing, enabled, raw: output.trim() });
         } catch (err) {
           return Response.json({ error: String(err) }, { status: 500 });

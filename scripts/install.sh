@@ -42,7 +42,7 @@ mkdir -p "$BIN_DIR"
 if [ -L "$BIN_DIR/$BIN_NAME" ] || [ -f "$BIN_DIR/$BIN_NAME" ]; then
     rm "$BIN_DIR/$BIN_NAME"
 fi
-ln -s "$APP_DEST/Contents/MacOS/clean-up" "$BIN_DIR/$BIN_NAME"
+ln -s "$APP_DEST/Contents/MacOS/clean-up-server" "$BIN_DIR/$BIN_NAME"
 echo "Symlinked CLI: $BIN_DIR/$BIN_NAME"
 
 echo ""

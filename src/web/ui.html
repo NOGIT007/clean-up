@@ -1933,13 +1933,20 @@
         const origHTML = btn.innerHTML;
         btn.innerHTML =
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 11-.57-8.38"/></svg> Requesting access\u2026';
+
+        // Stop any polling while the password dialog is open to avoid
+        // background requests that could interfere with the admin prompt
+        stopSpotlightPoll();
+
         try {
           const res = await fetch("/api/reindex-spotlight", { method: "POST" });
           const data = await res.json();
           if (data.ok) {
             toast("Spotlight reindex started — takes ~10-30 min");
-            // Immediately refresh status and start polling
-            await checkSpotlightStatus();
+            // Immediately show indexing state — don't wait for mdutil -s
+            // which has a race condition (Spotlight hasn't started yet)
+            setSpotlightIndexing();
+            startSpotlightPoll();
           } else if (data.error === "cancelled") {
             // User cancelled the password dialog — no toast needed
           } else {
@@ -1951,6 +1958,17 @@
           btn.disabled = false;
           btn.innerHTML = origHTML;
         }
+      }
+
+      function setSpotlightIndexing() {
+        const el = document.getElementById("spotlightStatus");
+        const label = document.getElementById("spotlightStatusLabel");
+        const detail = document.getElementById("spotlightStatusDetail");
+        el.classList.remove("idle");
+        el.classList.add("indexing");
+        label.textContent = "Indexing in progress";
+        detail.textContent =
+          "Spotlight is rebuilding — this may take 10-30 min";
       }
 
       // =========================================================================
