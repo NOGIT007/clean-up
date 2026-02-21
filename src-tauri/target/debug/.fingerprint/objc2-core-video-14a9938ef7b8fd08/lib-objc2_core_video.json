@@ -1,0 +1,29 @@
+{
+  "rustc": 13850170861107434965,
+  "features": "[\"CVBase\", \"bitflags\", \"objc2\"]",
+  "declared_features": "[\"CVBase\", \"CVBuffer\", \"CVDisplayLink\", \"CVHostTime\", \"CVImageBuffer\", \"CVMetalBuffer\", \"CVMetalBufferCache\", \"CVMetalTexture\", \"CVMetalTextureCache\", \"CVOpenGLBuffer\", \"CVOpenGLBufferPool\", \"CVOpenGLTexture\", \"CVOpenGLTextureCache\", \"CVPixelBuffer\", \"CVPixelBufferIOSurface\", \"CVPixelBufferPool\", \"CVPixelFormatDescription\", \"CVReturn\", \"alloc\", \"bitflags\", \"block2\", \"default\", \"objc2\", \"objc2-core-graphics\", \"objc2-io-surface\", \"objc2-metal\", \"objc2-open-gl\", \"std\", \"unstable-darwin-objc\"]",
+  "target": 2300057392721517211,
+  "profile": 13720545865460419480,
+  "path": 6808954001562864266,
+  "deps": [
+    [7135881783873010513, "objc2", false, 10307548326583107143],
+    [
+      11433498304369778956,
+      "objc2_core_foundation",
+      false,
+      11484155183115639699
+    ],
+    [16909888598953886583, "bitflags", false, 13739531086666568653]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/objc2-core-video-14a9938ef7b8fd08/dep-lib-objc2_core_video",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

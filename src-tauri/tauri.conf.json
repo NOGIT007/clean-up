@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-utils/schema.json",
+  "identifier": "com.kennetkusk.clean-up",
+  "version": "1.2.0",
+  "productName": "Clean Up",
+  "build": {
+    "frontendDist": "../frontend"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Clean Up",
+        "width": 800,
+        "height": 700,
+        "center": true,
+        "minWidth": 600,
+        "minHeight": 500,
+        "decorations": true,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: appicon:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "entitlements": "Entitlements.plist",
+      "signingIdentity": "-",
+      "minimumSystemVersion": "13.0"
+    },
+    "copyright": "Copyright (c) 2026 Kennet Dahl Kusk. MIT License."
+  }
+}

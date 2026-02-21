@@ -1,0 +1,44 @@
+{
+  "rustc": 13850170861107434965,
+  "features": "[\"brotli\", \"compression\", \"resources\", \"walkdir\"]",
+  "declared_features": "[\"aes-gcm\", \"brotli\", \"build\", \"cargo_metadata\", \"compression\", \"config-json5\", \"config-toml\", \"getrandom\", \"html-manipulation\", \"isolation\", \"json5\", \"proc-macro2\", \"process-relaunch-dangerous-allow-symlink-macos\", \"quote\", \"resources\", \"schema\", \"schemars\", \"serialize-to-javascript\", \"swift-rs\", \"walkdir\"]",
+  "target": 7530130812022395703,
+  "profile": 8276155916380437441,
+  "path": 15583121160206366244,
+  "deps": [
+    [1200537532907108615, "urlpattern", false, 1424435308413883951],
+    [1363051979936526615, "memchr", false, 2635955450013334293],
+    [1528297757488249563, "url", false, 17769465054515914872],
+    [1678291836268844980, "brotli", false, 1274348671195239017],
+    [2448563160050429386, "thiserror", false, 16723917591260345328],
+    [2620434475832828286, "http", false, 6051488514492715113],
+    [6606131838865521726, "ctor", false, 5113537995666992492],
+    [7170110829644101142, "json_patch", false, 2972147288147304214],
+    [8396910435473226963, "serde_with", false, 13943848829562565474],
+    [9086780327361459375, "serde_untagged", false, 2713885793856480308],
+    [9293239362693504808, "glob", false, 5518292231795408249],
+    [9462185088798423431, "uuid", false, 11320756979244958383],
+    [10630857666389190470, "log", false, 15457607388315150504],
+    [11989259058781683633, "dunce", false, 9413021026699617679],
+    [12176723955989927267, "toml", false, 6582241582789114271],
+    [12478428894219133322, "anyhow", false, 13784103624166125312],
+    [13548984313718623784, "serde", false, 11165087059417896742],
+    [13795362694956882968, "serde_json", false, 12105573125462523090],
+    [15622660310229662834, "walkdir", false, 10633838109781940274],
+    [17109794424245468765, "regex", false, 4337031541756890726],
+    [17146114186171651583, "infer", false, 7527120510943867960],
+    [17186037756130803222, "phf", false, 18285565675059773667],
+    [18361894353739432590, "semver", false, 9673442220081544507]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/tauri-utils-2d2d8cad104b0de4/dep-lib-tauri_utils",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

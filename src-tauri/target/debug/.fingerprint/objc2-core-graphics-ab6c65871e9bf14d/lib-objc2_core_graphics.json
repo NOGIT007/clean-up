@@ -1,0 +1,29 @@
+{
+  "rustc": 13850170861107434965,
+  "features": "[\"CGColor\", \"CGColorSpace\", \"CGContext\", \"CGDirectDisplay\", \"CGEventTypes\", \"CGFont\", \"CGImage\", \"CGPath\", \"bitflags\", \"objc2\"]",
+  "declared_features": "[\"CGAffineTransform\", \"CGBase\", \"CGBitmapContext\", \"CGColor\", \"CGColorConversionInfo\", \"CGColorSpace\", \"CGContext\", \"CGConvertColorDataWithFormat\", \"CGDataConsumer\", \"CGDataProvider\", \"CGDirectDisplay\", \"CGDirectDisplayMetal\", \"CGDirectPalette\", \"CGDisplayConfiguration\", \"CGDisplayFade\", \"CGDisplayStream\", \"CGEXRToneMappingGamma\", \"CGError\", \"CGEvent\", \"CGEventSource\", \"CGEventTypes\", \"CGFont\", \"CGFunction\", \"CGGeometry\", \"CGGradient\", \"CGITUToneMapping\", \"CGImage\", \"CGLayer\", \"CGPDFArray\", \"CGPDFContentStream\", \"CGPDFContext\", \"CGPDFDictionary\", \"CGPDFDocument\", \"CGPDFObject\", \"CGPDFOperatorTable\", \"CGPDFPage\", \"CGPDFScanner\", \"CGPDFStream\", \"CGPDFString\", \"CGPSConverter\", \"CGPath\", \"CGPattern\", \"CGRemoteOperation\", \"CGRenderingBufferProvider\", \"CGSession\", \"CGShading\", \"CGToneMapping\", \"CGWindow\", \"CGWindowLevel\", \"alloc\", \"bitflags\", \"block2\", \"default\", \"dispatch2\", \"libc\", \"objc2\", \"objc2-io-surface\", \"objc2-metal\", \"std\", \"unstable-darwin-objc\"]",
+  "target": 2289170162222055009,
+  "profile": 13720545865460419480,
+  "path": 14589791213208900684,
+  "deps": [
+    [7135881783873010513, "objc2", false, 10307548326583107143],
+    [
+      11433498304369778956,
+      "objc2_core_foundation",
+      false,
+      11484155183115639699
+    ],
+    [16909888598953886583, "bitflags", false, 13739531086666568653]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/objc2-core-graphics-ab6c65871e9bf14d/dep-lib-objc2_core_graphics",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

@@ -1,0 +1,20 @@
+{
+  "rustc": 13850170861107434965,
+  "features": "[\"custom-protocol\", \"default\"]",
+  "declared_features": "[\"custom-protocol\", \"default\"]",
+  "target": 5408242616063297496,
+  "profile": 502103643719580362,
+  "path": 13767053534773805487,
+  "deps": [[3325400983236658459, "tauri_build", false, 14129670668971106805]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/clean-up-277f906b59c31d93/dep-build-script-build-script-build",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}
