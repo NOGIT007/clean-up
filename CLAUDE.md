@@ -1,22 +1,30 @@
 # Clean Up
 
-Interactive macOS cleanup CLI tool — zero dependencies, standalone binary.
+Interactive macOS cleanup tool — Tauri v2 desktop app.
 
 ## Architecture
 
-- **Entry point**: `src/index.ts` (TUI flow: select → scan → review → trash)
-- **Scanners**: `src/scanners/` (dev-artifacts, system-caches, app-leftovers, large-old-files)
-- **TUI**: `src/tui/` (custom prompts + formatting, no deps)
-- **Utils**: `src/utils/` (fs helpers, trash via macOS `osascript`, app detection)
-- **Build**: `scripts/build.sh` → standalone binary + .app bundle
-- **Stack**: TypeScript + Bun (build-time only)
+- **Backend (Rust)**: `src-tauri/src/` — Tauri v2 app with IPC commands
+  - `lib.rs` — app setup, command registration, appicon:// protocol
+  - `commands.rs` — 11 Tauri IPC commands (scan, trash, permissions, etc.)
+  - `types.rs` — shared types with serde camelCase serialization
+  - `scanners/` — 6 scanners (dev-artifacts, system-caches, app-leftovers, large-old-files, unused-apps, homebrew-cleanup)
+  - `utils/` — fs helpers, trash (osascript + safety blocklist), app detection (mdfind/mdls)
+- **Frontend**: `frontend/index.html` — single-file UI using Tauri IPC (`invoke()`)
+- **Config**: `src-tauri/tauri.conf.json` — Tauri v2 configuration
+- **Legacy TS**: `src/` — original TypeScript+Bun source (kept for reference)
 
 ## Critical Rules
 
-- Never use `rm` — all deletions go through `moveToTrash()` in `src/utils/trash.ts`
-- Zero runtime dependencies — no npm packages allowed
-- Version must be bumped in both `package.json` and `src/index.ts` (VERSION const)
-- Path blocklist in `src/utils/fs.ts` must never be weakened
+- Never use `rm` — all deletions go through trash safety blocklist in `src-tauri/src/utils/trash.rs`
+- Path blocklist (BLOCKED_PATHS + BLOCKED_PREFIXES) must never be weakened
+- Version must be bumped in: `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`
+
+## Development
+
+- Build: `cargo tauri build` (from project root)
+- Test: `cargo test` (from `src-tauri/`)
+- Dev: `cargo tauri dev` (from project root)
 
 ## Detailed Rules
 

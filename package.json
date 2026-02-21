@@ -8,10 +8,9 @@
     "clean-up": "src/index.ts"
   },
   "scripts": {
-    "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --compile --outfile clean-up",
-    "build:app": "bash scripts/build.sh",
-    "install:app": "bash scripts/install.sh"
+    "tauri:dev": "cargo tauri dev",
+    "tauri:build": "cargo tauri build",
+    "test": "cd src-tauri && cargo test"
   },
   "devDependencies": {
     "@types/bun": "latest"
