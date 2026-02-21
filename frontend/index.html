@@ -181,46 +181,6 @@
         font-family: var(--mono);
         white-space: nowrap;
       }
-      .topbar-sep {
-        width: 1px;
-        height: 16px;
-        background: var(--border-strong);
-      }
-      .quit-btn {
-        background: none;
-        border: none;
-        color: var(--text-dim);
-        font-family: var(--font);
-        font-size: 12.5px;
-        font-weight: 500;
-        cursor: pointer;
-        padding: 0.25rem 0.5rem;
-        border-radius: var(--radius-xs);
-        transition: all 0.15s var(--ease);
-      }
-      .quit-btn:hover {
-        color: var(--danger);
-        background: var(--danger-soft);
-      }
-
-      /* ============================================================
-   DRY RUN BANNER
-   ============================================================ */
-      .dry-run-banner {
-        display: none;
-        background: var(--amber-soft);
-        border: 1px solid var(--amber-border);
-        color: #92400e;
-        padding: 0.625rem 1rem;
-        border-radius: var(--radius-sm);
-        font-size: 13px;
-        font-weight: 500;
-        margin-bottom: 1.5rem;
-        text-align: center;
-      }
-      .dry-run-banner.visible {
-        display: block;
-      }
 
       /* ============================================================
    HERO / INTRO
@@ -1558,17 +1518,11 @@
         <div class="topbar-spacer"></div>
         <div class="topbar-meta">
           <span class="topbar-version" id="versionTag">loading...</span>
-          <div class="topbar-sep"></div>
-          <button class="quit-btn" onclick="quitApp()">Quit</button>
         </div>
       </div>
     </div>
 
     <div class="container">
-      <div class="dry-run-banner" id="dryRunBanner">
-        Dry Run Mode — no files will be moved to Trash
-      </div>
-
       <!-- Step 1: Scanner Selection -->
       <section id="selectSection" class="visible">
         <div class="hero">
@@ -1941,6 +1895,9 @@
     </div>
 
     <script>
+      // Tauri IPC bridge
+      const { invoke } = window.__TAURI__.core;
+
       // =========================================================================
       // State
       // =========================================================================
@@ -1949,7 +1906,6 @@
       let sortField = "size";
       let sortAsc = false;
       let activeFilters = new Set();
-      let isDryRun = false;
 
       // Uninstall state
       let currentMode = "clean"; // 'clean' | 'uninstall' | 'spotlight' | 'permissions'
@@ -1974,13 +1930,11 @@
       // =========================================================================
       (async function init() {
         try {
-          const [scannersRes, dryRunRes, versionRes] = await Promise.all([
-            fetch("/api/scanners").then((r) => r.json()),
-            fetch("/api/dry-run").then((r) => r.json()),
-            fetch("/api/version").then((r) => r.json()),
+          const [scannersRes, versionRes] = await Promise.all([
+            invoke("list_scanners"),
+            invoke("get_version"),
           ]);
           scanners = scannersRes;
-          isDryRun = dryRunRes.dryRun;
 
           const tag = document.getElementById("versionTag");
           try {
@@ -2011,10 +1965,6 @@
             tag.textContent = "";
           }
 
-          if (isDryRun) {
-            document.getElementById("dryRunBanner").classList.add("visible");
-            document.getElementById("trashBtn").style.display = "none";
-          }
           renderScannerCards();
         } catch (err) {
           console.error("Init failed:", err);
@@ -2089,8 +2039,7 @@
 
       async function checkSpotlightStatus() {
         try {
-          const res = await fetch("/api/spotlight-status");
-          const data = await res.json();
+          const data = await invoke("spotlight_status");
           const el = document.getElementById("spotlightStatus");
           const label = document.getElementById("spotlightStatusLabel");
           const detail = document.getElementById("spotlightStatusDetail");
@@ -2144,21 +2093,18 @@
         stopSpotlightPoll();
 
         try {
-          const res = await fetch("/api/reindex-spotlight", { method: "POST" });
-          const data = await res.json();
-          if (data.ok) {
-            toast("Spotlight reindex started — takes ~10-30 min");
-            // Immediately show indexing state — don't wait for mdutil -s
-            // which has a race condition (Spotlight hasn't started yet)
-            setSpotlightIndexing();
-            startSpotlightPoll();
-          } else if (data.error === "cancelled") {
-            // User cancelled the password dialog — no toast needed
-          } else {
-            toast("Reindex failed: " + (data.error || "unknown error"), true);
-          }
+          await invoke("reindex_spotlight");
+          toast("Spotlight reindex started — takes ~10-30 min");
+          // Immediately show indexing state — don't wait for mdutil -s
+          // which has a race condition (Spotlight hasn't started yet)
+          setSpotlightIndexing();
+          startSpotlightPoll();
         } catch (err) {
-          toast("Reindex failed: " + err.message, true);
+          const msg =
+            typeof err === "string" ? err : err.message || String(err);
+          if (msg !== "cancelled") {
+            toast("Reindex failed: " + msg, true);
+          }
         } finally {
           btn.disabled = false;
           btn.innerHTML = origHTML;
@@ -2191,11 +2137,7 @@
         document.getElementById("bottomBar").classList.remove("visible");
 
         try {
-          const results = await fetch("/api/scan", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scannerIds: ids }),
-          }).then((r) => r.json());
+          const results = await invoke("run_scan", { scannerIds: ids });
 
           lastScannedNames = results.map((r) => r.scannerName);
           findings = results.flatMap((r) =>
@@ -2302,8 +2244,7 @@
         updateSortHeaders();
         document.getElementById("selectAll").checked = true;
         show("resultsSection");
-        if (!isDryRun)
-          document.getElementById("bottomBar").classList.add("visible");
+        document.getElementById("bottomBar").classList.add("visible");
         renderFilterChips();
         applyFilters();
         updateBottomBar();
@@ -2538,16 +2479,7 @@
         tb.textContent = "Moving\u2026";
 
         try {
-          const res = await fetch("/api/trash", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paths }),
-          }).then((r) => r.json());
-
-          if (res.error) {
-            toast(res.error, true);
-            return;
-          }
+          const res = await invoke("trash_items", { paths });
 
           const ok = res.results.filter((r) => r.success).length;
           const fail = res.results.filter((r) => !r.success).length;
@@ -2570,7 +2502,9 @@
           const link = ok > 0 ? '<a onclick="openTrash()">Open Trash</a>' : "";
           toast(msg, fail > 0, fail > 0 ? undefined : msg + link);
         } catch (err) {
-          toast("Trash failed: " + err.message, true);
+          const msg =
+            typeof err === "string" ? err : err.message || String(err);
+          toast("Trash failed: " + msg, true);
         } finally {
           tb.disabled = false;
           tb.innerHTML = origHTML;
@@ -2588,15 +2522,7 @@
         show("selectSection");
       }
 
-      async function quitApp() {
-        try {
-          await fetch("/api/quit", { method: "POST" });
-        } catch {}
-        document.body.innerHTML =
-          '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:DM Sans,system-ui;color:#a8a29e;flex-direction:column;gap:0.5rem">' +
-          '<div style="font-size:28px">&#9995;</div>' +
-          '<p style="font-size:15px;font-weight:500">Server stopped. You can close this tab.</p></div>';
-      }
+      // Quit handled by native window close in Tauri
 
       // =========================================================================
       // Uninstall Mode
@@ -2626,8 +2552,7 @@
           // Show whichever clean-mode section was active
           if (findings.length > 0) {
             show("resultsSection");
-            if (!isDryRun)
-              document.getElementById("bottomBar").classList.add("visible");
+            document.getElementById("bottomBar").classList.add("visible");
           } else {
             show("selectSection");
           }
@@ -2651,8 +2576,7 @@
         document.getElementById("appDetailPanel").classList.remove("visible");
 
         try {
-          const res = await fetch("/api/apps");
-          appsList = await res.json();
+          appsList = await invoke("list_apps");
           appsLoaded = true;
           document.getElementById("appSpinner").classList.remove("visible");
           document.getElementById("appListView").style.display = "block";
@@ -2705,7 +2629,7 @@
         const cls = sz > 36 ? "app-icon-img large" : "app-icon-img";
         const encoded = encodeURIComponent(appPath);
         const safeName = esc(name).replace(/"/g, "&quot;");
-        return `<img class="${cls}" src="/api/app-icon?path=${encoded}" loading="lazy" onerror="iconFallback(this, '${sz}', &quot;${safeName}&quot;)" />`;
+        return `<img class="${cls}" src="appicon://localhost/${encoded}" loading="lazy" onerror="iconFallback(this, '${sz}', &quot;${safeName}&quot;)" />`;
       }
 
       function iconFallback(img, sz, name) {
@@ -2752,15 +2676,10 @@
         document.getElementById("detailSpinner").classList.add("visible");
 
         try {
-          const res = await fetch("/api/app-data", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              bundleId: selectedApp.bundleId,
-              appName: selectedApp.name,
-            }),
+          selectedAppData = await invoke("get_app_data", {
+            bundleId: selectedApp.bundleId,
+            appName: selectedApp.name,
           });
-          selectedAppData = await res.json();
         } catch (err) {
           selectedAppData = [];
           toast("Failed to scan app data: " + err.message, true);
@@ -2802,10 +2721,6 @@
 
         updateUninstallSummary();
         document.getElementById("appDetailPanel").classList.add("visible");
-
-        if (isDryRun) {
-          document.getElementById("uninstallBtn").style.display = "none";
-        }
       }
 
       function updateUninstallSummary() {
@@ -2867,16 +2782,7 @@
           btn.textContent = "Moving\u2026";
 
           try {
-            const res = await fetch("/api/trash", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paths }),
-            }).then((r) => r.json());
-
-            if (res.error) {
-              toast(res.error, true);
-              return;
-            }
+            const res = await invoke("trash_items", { paths });
 
             const ok = res.results.filter((r) => r.success).length;
             const fail = res.results.filter((r) => !r.success).length;
@@ -2888,7 +2794,9 @@
             appsList = appsList.filter((a) => a !== selectedApp);
             backToAppList();
           } catch (err) {
-            toast("Uninstall failed: " + err.message, true);
+            const emsg =
+              typeof err === "string" ? err : err.message || String(err);
+            toast("Uninstall failed: " + emsg, true);
           } finally {
             btn.disabled = false;
             btn.innerHTML = origHTML;
@@ -2959,8 +2867,7 @@
         container.innerHTML =
           '<p style="text-align:center;color:var(--text-dim);font-size:13px;padding:1rem 0">Checking permissions&hellip;</p>';
         try {
-          const res = await fetch("/api/permissions");
-          const perms = await res.json();
+          const perms = await invoke("check_permissions");
           permsLoaded = true;
           container.innerHTML = "";
           const permHelpMap = {
@@ -3012,11 +2919,7 @@
 
       async function openPermSettings(deepLink) {
         try {
-          await fetch("/api/open-settings", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ deepLink }),
-          });
+          await invoke("open_settings", { deepLink });
         } catch {}
       }
 
@@ -3039,7 +2942,7 @@
       }
 
       function openTrash() {
-        fetch("/api/open-trash", { method: "POST" }).catch(() => {});
+        invoke("open_trash").catch(() => {});
       }
     </script>
   </body>
