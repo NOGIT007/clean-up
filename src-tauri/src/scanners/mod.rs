@@ -96,3 +96,36 @@ pub async fn run_scanners(scanner_ids: &[String]) -> Vec<ScanResult> {
 
     results
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scanner_count() {
+        let scanners = all_scanner_info();
+        assert_eq!(scanners.len(), 6);
+    }
+
+    #[test]
+    fn scanner_ids_are_unique() {
+        let scanners = all_scanner_info();
+        let ids: Vec<&str> = scanners.iter().map(|s| s.id.as_str()).collect();
+        let mut deduped = ids.clone();
+        deduped.sort();
+        deduped.dedup();
+        assert_eq!(ids.len(), deduped.len());
+    }
+
+    #[test]
+    fn expected_scanners_present() {
+        let scanners = all_scanner_info();
+        let ids: Vec<String> = scanners.iter().map(|s| s.id.clone()).collect();
+        assert!(ids.contains(&"dev-artifacts".to_string()));
+        assert!(ids.contains(&"system-caches".to_string()));
+        assert!(ids.contains(&"app-leftovers".to_string()));
+        assert!(ids.contains(&"large-old-files".to_string()));
+        assert!(ids.contains(&"unused-apps".to_string()));
+        assert!(ids.contains(&"homebrew-cleanup".to_string()));
+    }
+}

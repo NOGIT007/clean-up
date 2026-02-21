@@ -294,3 +294,68 @@ pub async fn scan() -> ScanResult {
         duration: start.elapsed().as_millis() as u64,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_datetime_basic() {
+        // 2024-01-01T00:00:00Z should be some positive value
+        let ms = parse_datetime_to_ms("2024-01-01T00:00:00Z");
+        assert!(ms.is_some());
+        assert!(ms.unwrap() > 0);
+    }
+
+    #[test]
+    fn parse_datetime_known_epoch() {
+        // 1970-01-01T00:00:00Z should be 0
+        let ms = parse_datetime_to_ms("1970-01-01T00:00:00Z");
+        assert_eq!(ms, Some(0));
+    }
+
+    #[test]
+    fn parse_datetime_with_time() {
+        // 1970-01-01T01:00:00Z = 3600 seconds = 3600000 ms
+        let ms = parse_datetime_to_ms("1970-01-01T01:00:00Z");
+        assert_eq!(ms, Some(3_600_000));
+    }
+
+    #[test]
+    fn parse_datetime_invalid() {
+        assert_eq!(parse_datetime_to_ms("not a date"), None);
+        assert_eq!(parse_datetime_to_ms(""), None);
+        assert_eq!(parse_datetime_to_ms("2024"), None);
+    }
+
+    #[test]
+    fn leap_year_detection() {
+        assert!(is_leap_year(2000)); // divisible by 400
+        assert!(is_leap_year(2024)); // divisible by 4, not 100
+        assert!(!is_leap_year(1900)); // divisible by 100, not 400
+        assert!(!is_leap_year(2023)); // not divisible by 4
+    }
+
+    #[test]
+    fn format_months_display() {
+        assert_eq!(format_months(0), "less than a month");
+        let one_month_ms = 30 * 24 * 60 * 60 * 1000;
+        assert_eq!(format_months(one_month_ms), "1 month");
+        assert_eq!(format_months(one_month_ms * 6), "6 months");
+    }
+
+    #[test]
+    fn app_name_extraction() {
+        assert_eq!(app_name("/Applications/Firefox.app"), "Firefox.app");
+        assert_eq!(app_name("/Users/test/Applications/MyApp.app"), "MyApp.app");
+        assert_eq!(app_name("StandaloneApp.app"), "StandaloneApp.app");
+    }
+
+    #[test]
+    fn skip_apps_includes_system_apps() {
+        assert!(SKIP_APPS.contains("Safari.app"));
+        assert!(SKIP_APPS.contains("Finder.app"));
+        assert!(SKIP_APPS.contains("Clean Up.app"));
+        assert!(!SKIP_APPS.contains("Firefox.app"));
+    }
+}

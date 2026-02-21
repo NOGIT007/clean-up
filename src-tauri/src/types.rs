@@ -84,3 +84,84 @@ pub struct TrashResult {
     pub path: String,
     pub success: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn effort_serializes_as_camel_case() {
+        let json = serde_json::to_string(&Effort::None).unwrap();
+        assert_eq!(json, r#""none""#);
+        let json = serde_json::to_string(&Effort::Reinstall).unwrap();
+        assert_eq!(json, r#""reinstall""#);
+    }
+
+    #[test]
+    fn effort_deserializes_from_camel_case() {
+        let e: Effort = serde_json::from_str(r#""none""#).unwrap();
+        assert_eq!(e, Effort::None);
+        let e: Effort = serde_json::from_str(r#""reinstall""#).unwrap();
+        assert_eq!(e, Effort::Reinstall);
+    }
+
+    #[test]
+    fn finding_serializes_camel_case_fields() {
+        let finding = Finding {
+            path: "/test".to_string(),
+            label: "Test".to_string(),
+            size: 1024,
+            age: 5000,
+            reason: "test reason".to_string(),
+            effort: Some(Effort::None),
+        };
+        let json = serde_json::to_string(&finding).unwrap();
+        // Verify camelCase field names
+        assert!(json.contains(r#""path""#));
+        assert!(json.contains(r#""label""#));
+        assert!(json.contains(r#""size""#));
+        assert!(json.contains(r#""age""#));
+        assert!(json.contains(r#""reason""#));
+        assert!(json.contains(r#""effort""#));
+    }
+
+    #[test]
+    fn finding_effort_none_skipped_when_none() {
+        let finding = Finding {
+            path: "/test".to_string(),
+            label: "Test".to_string(),
+            size: 0,
+            age: 0,
+            reason: "test".to_string(),
+            effort: None,
+        };
+        let json = serde_json::to_string(&finding).unwrap();
+        assert!(!json.contains("effort"));
+    }
+
+    #[test]
+    fn scan_result_camel_case() {
+        let result = ScanResult {
+            scanner_name: "Test Scanner".to_string(),
+            findings: Vec::new(),
+            total_size: 42,
+            duration: 100,
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(json.contains(r#""scannerName""#));
+        assert!(json.contains(r#""totalSize""#));
+    }
+
+    #[test]
+    fn app_info_camel_case() {
+        let info = AppInfo {
+            name: "Test".to_string(),
+            path: "/test".to_string(),
+            bundle_id: "com.test".to_string(),
+            app_size: 1024,
+        };
+        let json = serde_json::to_string(&info).unwrap();
+        assert!(json.contains(r#""bundleId""#));
+        assert!(json.contains(r#""appSize""#));
+    }
+}

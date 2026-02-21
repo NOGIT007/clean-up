@@ -159,3 +159,37 @@ pub async fn scan() -> ScanResult {
         duration: start.elapsed().as_millis() as u64,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn classify_cellar_path() {
+        let (label, reason) = classify_path("/opt/homebrew/Cellar/node/21.0.0");
+        assert_eq!(label, "node@21.0.0");
+        assert!(reason.contains("Old formula version"));
+    }
+
+    #[test]
+    fn classify_caskroom_path() {
+        let (label, reason) = classify_path("/opt/homebrew/Caskroom/firefox/120.0");
+        assert_eq!(label, "firefox@120.0");
+        assert!(reason.contains("Old cask version"));
+    }
+
+    #[test]
+    fn classify_cache_path() {
+        let (label, reason) =
+            classify_path("/Users/test/Library/Caches/Homebrew/downloads/abc123--node-21.tar.gz");
+        assert!(label.starts_with("Cached download:"));
+        assert!(reason.contains("Stale Homebrew cache"));
+    }
+
+    #[test]
+    fn classify_unknown_path() {
+        let (label, reason) = classify_path("/opt/homebrew/share/old-thing");
+        assert_eq!(label, "old-thing");
+        assert!(reason.contains("Old Homebrew artifact"));
+    }
+}
