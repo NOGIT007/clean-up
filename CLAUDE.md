@@ -12,7 +12,8 @@ Interactive macOS cleanup tool — Tauri v2 desktop app.
   - `utils/` — fs helpers, trash (osascript + safety blocklist), app detection (mdfind/mdls)
 - **Frontend**: `frontend/index.html` — single-file UI using Tauri IPC (`invoke()`)
 - **Config**: `src-tauri/tauri.conf.json` — Tauri v2 configuration
-- **Legacy TS**: `src/` — original TypeScript+Bun source (kept for reference)
+- **Build**: `scripts/build.sh` — Tauri build pipeline + icon generation
+- **Install**: `scripts/install.sh` — copies to ~/Applications, Spotlight indexing
 
 ## Critical Rules
 
