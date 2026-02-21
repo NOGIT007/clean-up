@@ -4,6 +4,10 @@ Interactive macOS cleanup tool — a native Tauri v2 desktop app. Finds junk fil
 
 Zero runtime dependencies. One standalone binary. Everything is recoverable.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="Clean Up — scanner selection" width="500">
+</p>
+
 ## Features
 
 - **6 scanners** — dev artifacts, system caches, app leftovers, large/old files, unused apps, Homebrew cleanup
