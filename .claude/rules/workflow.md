@@ -14,7 +14,8 @@ _Applied when committing, pushing, or releasing._
 ## Local Build & Install
 
 - After any code change, always rebuild and install locally before pushing:
-  `cargo tauri build`
+  `bun run build:app && bun run install:app`
+- Verify the installed version: `~/.local/bin/clean-up --version`
 - User launches from Spotlight — the installed app must always match the source
 
 ## Release Notes

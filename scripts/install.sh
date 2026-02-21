@@ -37,19 +37,25 @@ cp -R "$APP_SOURCE" "$APP_DEST"
 rm -rf "$APP_SOURCE"
 echo "Removed dist copy to prevent duplicate Spotlight entries."
 
-# Symlink the binary for CLI usage
+# Symlink the binary for CLI usage (launches the GUI app)
 mkdir -p "$BIN_DIR"
 if [ -L "$BIN_DIR/$BIN_NAME" ] || [ -f "$BIN_DIR/$BIN_NAME" ]; then
     rm "$BIN_DIR/$BIN_NAME"
 fi
-ln -s "$APP_DEST/Contents/MacOS/clean-up-server" "$BIN_DIR/$BIN_NAME"
+ln -s "$APP_DEST/Contents/MacOS/clean-up" "$BIN_DIR/$BIN_NAME"
 echo "Symlinked CLI: $BIN_DIR/$BIN_NAME"
+
+# Trigger Spotlight reindex for the installed app
+mdimport "$APP_DEST" 2>/dev/null || true
 
 echo ""
 echo "Done! Clean Up is installed."
 echo ""
 echo "  Spotlight:  Search for \"Clean Up\" (may take a moment to index)"
-echo "  CLI:        $BIN_NAME --help"
+echo "  CLI:        $BIN_NAME (launches the GUI)"
 echo ""
 echo "Note: On first launch, macOS may show a Gatekeeper warning."
-echo "      Right-click the app → Open to bypass it."
+echo "      Right-click the app > Open to bypass it."
+echo ""
+echo "  Full Disk Access must be granted in System Settings:"
+echo "    Privacy & Security > Full Disk Access > Enable 'Clean Up'"
