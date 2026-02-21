@@ -56,6 +56,9 @@ mkdir -p "$DIST"
 rm -rf "$DIST/Clean Up.app"
 cp -R "$TAURI_OUT" "$DIST/Clean Up.app"
 
+# Remove target bundle copy to prevent duplicate Spotlight entries
+rm -rf "$TAURI_OUT"
+
 echo ""
 echo "==> Build complete: dist/Clean Up.app/"
 echo ""
