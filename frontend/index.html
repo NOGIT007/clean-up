@@ -1485,33 +1485,15 @@
           </div>
           <span class="topbar-title">Clean Up</span>
         </div>
-        <nav class="topbar-nav">
-          <button
-            class="topbar-nav-btn active"
-            data-mode="clean"
-            onclick="switchMode('clean')"
-          >
-            Clean
-          </button>
-          <button
-            class="topbar-nav-btn"
-            data-mode="uninstall"
-            onclick="switchMode('uninstall')"
-          >
+        <nav class="topbar-nav" id="topbarNav">
+          <button class="topbar-nav-btn active" data-mode="clean">Clean</button>
+          <button class="topbar-nav-btn" data-mode="uninstall">
             Uninstall
           </button>
-          <button
-            class="topbar-nav-btn"
-            data-mode="spotlight"
-            onclick="switchMode('spotlight')"
-          >
+          <button class="topbar-nav-btn" data-mode="spotlight">
             Spotlight
           </button>
-          <button
-            class="topbar-nav-btn"
-            data-mode="permissions"
-            onclick="switchMode('permissions')"
-          >
+          <button class="topbar-nav-btn" data-mode="permissions">
             Permissions
           </button>
         </nav>
@@ -1543,17 +1525,13 @@
           </div>
         </div>
         <div class="scanner-toggle-row">
-          <button
-            class="scanner-toggle-btn"
-            id="scannerToggleBtn"
-            onclick="toggleAllScanners()"
-          >
+          <button class="scanner-toggle-btn" id="scannerToggleBtn">
             Deselect All
           </button>
         </div>
         <div class="scanner-grid" id="scannerGrid"></div>
         <div class="actions">
-          <button class="btn btn-primary" id="scanBtn" onclick="runScan()">
+          <button class="btn btn-primary" id="scanBtn">
             <svg
               width="15"
               height="15"
@@ -1622,11 +1600,7 @@
           rebuild the index right here. You'll be prompted for your admin
           password.
           <div class="spotlight-actions">
-            <button
-              class="btn btn-secondary btn-sm"
-              id="spotlightBtn"
-              onclick="reindexSpotlight()"
-            >
+            <button class="btn btn-secondary btn-sm" id="spotlightBtn">
               <svg
                 width="14"
                 height="14"
@@ -1657,7 +1631,7 @@
         </div>
         <div id="permList"></div>
         <div style="text-align: center; margin-top: 1rem">
-          <button class="btn btn-secondary" onclick="loadPermissions()">
+          <button class="btn btn-secondary" id="permCheckBtn">
             Check Again
           </button>
         </div>
@@ -1676,7 +1650,7 @@
             ></span>
           </div>
           <div class="results-bar-right">
-            <button class="btn btn-secondary" onclick="goBack()">
+            <button class="btn btn-secondary" id="backBtn">
               <svg
                 width="14"
                 height="14"
@@ -1693,12 +1667,7 @@
               Back
             </button>
             <label class="select-all-label">
-              <input
-                type="checkbox"
-                id="selectAll"
-                onchange="toggleAll(this.checked)"
-                checked
-              />
+              <input type="checkbox" id="selectAll" checked />
               All
             </label>
           </div>
@@ -1752,7 +1721,6 @@
               class="app-search"
               id="appSearch"
               placeholder="Search apps..."
-              oninput="renderAppList(this.value)"
             />
           </div>
           <div class="app-search-count" id="appSearchCount"></div>
@@ -1777,7 +1745,7 @@
           <div class="app-data-list" id="appDataList"></div>
 
           <div class="app-detail-actions">
-            <button class="btn btn-secondary" onclick="backToAppList()">
+            <button class="btn btn-secondary" id="backToAppsBtn">
               <svg
                 width="14"
                 height="14"
@@ -1793,11 +1761,7 @@
               </svg>
               Back
             </button>
-            <button
-              class="btn btn-danger"
-              id="uninstallBtn"
-              onclick="doUninstall()"
-            >
+            <button class="btn btn-danger" id="uninstallBtn">
               <svg
                 width="14"
                 height="14"
@@ -1854,10 +1818,10 @@
             Items can be recovered from Trash
           </div>
           <div class="actions">
-            <button class="btn btn-secondary" onclick="hideConfirm()">
+            <button class="btn btn-secondary" id="cancelConfirmBtn">
               Cancel
             </button>
-            <button class="btn btn-danger" id="confirmBtn" onclick="doTrash()">
+            <button class="btn btn-danger" id="confirmBtn">
               Move to Trash
             </button>
           </div>
@@ -1874,7 +1838,7 @@
         <span class="bottom-bar-info" id="bottomInfo">
           <strong>0</strong> items selected &middot; <strong>0 B</strong>
         </span>
-        <button class="btn btn-danger" id="trashBtn" onclick="showConfirm()">
+        <button class="btn btn-danger" id="trashBtn">
           <svg
             width="14"
             height="14"
@@ -1915,6 +1879,7 @@
       let selectedApp = null;
       let selectedAppData = [];
       let lastScannedNames = [];
+      let confirmAction = null; // set dynamically by showConfirm/doUninstall
 
       const SCANNER_ICONS = {
         "dev-artifacts": { icon: "&#128295;", cls: "icon-dev" },
@@ -1986,7 +1951,7 @@
               cls: "icon-dev",
             };
             return `
-        <div class="scanner-card selected" data-id="${s.id}" onclick="toggleCard(this)">
+        <div class="scanner-card selected" data-id="${s.id}">
           <div class="scanner-card-top">
             <div class="scanner-card-icon ${ic.cls}">${ic.icon}</div>
             <div class="check-circle">
@@ -2217,14 +2182,14 @@
             </div>
             <div class="results-list-header">
               <span></span>
-              <span data-sort="path" onclick="sortBy('path')">File <span class="arrow"></span></span>
-              <span data-sort="size" onclick="sortBy('size')" style="justify-content:flex-end">Size <span class="arrow"></span></span>
-              <span data-sort="age" onclick="sortBy('age')" style="justify-content:flex-end">Age <span class="arrow"></span></span>
+              <span data-sort="path">File <span class="arrow"></span></span>
+              <span data-sort="size" style="justify-content:flex-end">Size <span class="arrow"></span></span>
+              <span data-sort="age" style="justify-content:flex-end">Age <span class="arrow"></span></span>
             </div>`;
 
           for (const f of items) {
             html += `<div class="result-row">
-              <input type="checkbox" data-idx="${f._idx}" checked onchange="onCheck()">
+              <input type="checkbox" data-idx="${f._idx}" checked>
               <div class="path-cell">
                 <span class="path-main" title="${esc(f.path)}">${esc(truncPath(f.path))}</span>
                 <div class="path-meta">
@@ -2336,14 +2301,14 @@
         }
 
         const allActive = scannerIds.every((id) => activeFilters.has(id));
-        let html = `<button class="filter-chip${allActive ? " active" : ""}" data-filter="all" onclick="toggleFilter('all')">All (${findings.length})</button>`;
+        let html = `<button class="filter-chip${allActive ? " active" : ""}" data-filter="all">All (${findings.length})</button>`;
 
         for (const sid of scannerIds) {
           const scanner = scanners.find((s) => s.id === sid);
           const name = scanner ? scanner.name : sid;
           const count = scannerCounts.get(sid);
           const isActive = activeFilters.has(sid);
-          html += `<button class="filter-chip${isActive ? " active" : ""}" data-filter="${esc(sid)}" onclick="toggleFilter('${esc(sid)}')">${esc(name)} (${count})</button>`;
+          html += `<button class="filter-chip${isActive ? " active" : ""}" data-filter="${esc(sid)}">${esc(name)} (${count})</button>`;
         }
 
         document.getElementById("filterChips").innerHTML = html;
@@ -2461,6 +2426,7 @@
         const warn = document.getElementById("confirmWarning");
         if (size > 5 * 1024 ** 3) warn.classList.add("visible");
         else warn.classList.remove("visible");
+        confirmAction = doTrash; // default clean-mode action
         document.getElementById("confirmModal").classList.add("visible");
       }
 
@@ -2499,7 +2465,8 @@
 
           let msg = `Moved ${ok} item${ok === 1 ? "" : "s"} to Trash`;
           if (fail > 0) msg += ` (${fail} failed)`;
-          const link = ok > 0 ? '<a onclick="openTrash()">Open Trash</a>' : "";
+          const link =
+            ok > 0 ? '<a id="openTrashLink" href="#">Open Trash</a>' : "";
           toast(msg, fail > 0, fail > 0 ? undefined : msg + link);
         } catch (err) {
           const msg =
@@ -2609,7 +2576,7 @@
         body.innerHTML = filtered
           .map((a, i) => {
             const realIdx = appsList.indexOf(a);
-            return `<div class="app-row" onclick="selectApp(${realIdx})">
+            return `<div class="app-row" data-idx="${realIdx}">
                   ${appIconHtml(a.path, a.name, 36)}
                   <div class="app-row-info">
                     <h4>${esc(a.name)}</h4>
@@ -2712,7 +2679,7 @@
         dataBody.innerHTML = allItems
           .map(
             (d, i) => `<div class="app-data-row">
-                  <input type="checkbox" data-idx="${i}" checked onchange="updateUninstallSummary()">
+                  <input type="checkbox" data-idx="${i}" checked>
                   <span class="path-main" title="${esc(d.path)}">${esc(d.label)}</span>
                   <span class="size-cell">${fmtBytes(d.size)}</span>
                 </div>`,
@@ -2771,10 +2738,8 @@
           `This will move ${paths.length} item${paths.length === 1 ? "" : "s"} (${fmtBytes(size)}) to Trash.`;
         document.getElementById("confirmWarning").classList.remove("visible");
 
-        // Temporarily override the confirm button
-        const confirmBtn = document.getElementById("confirmBtn");
-        const origOnclick = confirmBtn.onclick;
-        confirmBtn.onclick = async function () {
+        // Override confirm action for uninstall flow
+        confirmAction = async function () {
           hideConfirm();
           const btn = document.getElementById("uninstallBtn");
           btn.disabled = true;
@@ -2800,7 +2765,7 @@
           } finally {
             btn.disabled = false;
             btn.innerHTML = origHTML;
-            confirmBtn.onclick = origOnclick;
+            confirmAction = doTrash; // restore default
           }
         };
 
@@ -2886,9 +2851,9 @@
               : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
             const action = p.granted
               ? '<span class="perm-badge granted">Granted</span>'
-              : '<button class="perm-open-btn" onclick="openPermSettings(\'' +
+              : '<button class="perm-open-btn" data-deep-link="' +
                 p.deepLink +
-                "')\">Open Settings</button>";
+                '">Open Settings</button>';
             const helpHint =
               !p.granted && permHelpMap[p.id]
                 ? '<div class="perm-help">' + permHelpMap[p.id] + "</div>"
@@ -2944,6 +2909,122 @@
       function openTrash() {
         invoke("open_trash").catch(() => {});
       }
+
+      // =========================================================================
+      // Event Listeners (replaces inline onclick/onchange/oninput handlers)
+      // =========================================================================
+
+      // Topbar navigation
+      document.getElementById("topbarNav").addEventListener("click", (e) => {
+        const btn = e.target.closest(".topbar-nav-btn");
+        if (btn && btn.dataset.mode) switchMode(btn.dataset.mode);
+      });
+
+      // Scanner selection
+      document
+        .getElementById("scannerToggleBtn")
+        .addEventListener("click", toggleAllScanners);
+      document.getElementById("scanBtn").addEventListener("click", runScan);
+
+      // Scanner card clicks (event delegation)
+      document.getElementById("scannerGrid").addEventListener("click", (e) => {
+        const card = e.target.closest(".scanner-card");
+        if (card) toggleCard(card);
+      });
+
+      // Spotlight reindex
+      document
+        .getElementById("spotlightBtn")
+        .addEventListener("click", reindexSpotlight);
+
+      // Permissions check
+      document
+        .getElementById("permCheckBtn")
+        .addEventListener("click", loadPermissions);
+
+      // Results: back button, select-all checkbox
+      document.getElementById("backBtn").addEventListener("click", goBack);
+      document
+        .getElementById("selectAll")
+        .addEventListener("change", function () {
+          toggleAll(this.checked);
+        });
+
+      // Results: filter chips (event delegation)
+      document.getElementById("filterChips").addEventListener("click", (e) => {
+        const chip = e.target.closest(".filter-chip");
+        if (chip && chip.dataset.filter) toggleFilter(chip.dataset.filter);
+      });
+
+      // Results: sort headers + item checkboxes (event delegation)
+      document
+        .getElementById("resultsGroups")
+        .addEventListener("click", (e) => {
+          const sortEl = e.target.closest("[data-sort]");
+          if (sortEl) sortBy(sortEl.dataset.sort);
+        });
+      document
+        .getElementById("resultsGroups")
+        .addEventListener("change", (e) => {
+          if (e.target.type === "checkbox") onCheck();
+        });
+
+      // App search input
+      document
+        .getElementById("appSearch")
+        .addEventListener("input", function () {
+          renderAppList(this.value);
+        });
+
+      // App list clicks (event delegation)
+      document.getElementById("appListBody").addEventListener("click", (e) => {
+        const row = e.target.closest(".app-row");
+        if (row) {
+          const idx = parseInt(row.dataset.idx, 10);
+          if (!isNaN(idx)) selectApp(idx);
+        }
+      });
+
+      // App detail: back, uninstall
+      document
+        .getElementById("backToAppsBtn")
+        .addEventListener("click", backToAppList);
+      document
+        .getElementById("uninstallBtn")
+        .addEventListener("click", doUninstall);
+
+      // App data checkboxes (event delegation)
+      document.getElementById("appDataList").addEventListener("change", (e) => {
+        if (e.target.type === "checkbox") updateUninstallSummary();
+      });
+
+      // Confirm modal
+      document
+        .getElementById("cancelConfirmBtn")
+        .addEventListener("click", hideConfirm);
+      document.getElementById("confirmBtn").addEventListener("click", () => {
+        if (confirmAction) confirmAction();
+      });
+
+      // Bottom bar trash button
+      document
+        .getElementById("trashBtn")
+        .addEventListener("click", showConfirm);
+
+      // Permission settings open buttons (event delegation)
+      document.getElementById("permList").addEventListener("click", (e) => {
+        const btn = e.target.closest(".perm-open-btn");
+        if (btn && btn.dataset.deepLink) openPermSettings(btn.dataset.deepLink);
+      });
+
+      // Toast "Open Trash" link (event delegation)
+      document.getElementById("toast").addEventListener("click", (e) => {
+        const link = e.target.closest("#openTrashLink");
+        if (link) {
+          e.preventDefault();
+          openTrash();
+        }
+      });
     </script>
   </body>
 </html>
