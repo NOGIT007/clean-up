@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-utils/schema.json",
   "identifier": "com.kennetkusk.clean-up",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "productName": "Clean Up",
   "build": {
     "frontendDist": "../frontend"
@@ -21,8 +21,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: appicon:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com ipc: tauri:",
-      "dangerousDisableAssetCspModification": true
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: appicon:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com ipc: tauri:"
     }
   },
   "bundle": {

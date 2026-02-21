@@ -1,18 +1,16 @@
 # Clean Up
 
-Interactive macOS cleanup tool with a native app and web UI. Finds junk files, unused apps, stale caches, and dev artifacts — lets you review everything before moving selected items to Trash.
+Interactive macOS cleanup tool — a native Tauri v2 desktop app. Finds junk files, unused apps, stale caches, and dev artifacts — lets you review everything before moving selected items to Trash.
 
 Zero runtime dependencies. One standalone binary. Everything is recoverable.
 
 ## Features
 
 - **6 scanners** — dev artifacts, system caches, app leftovers, large/old files, unused apps, Homebrew cleanup
-- **Web UI** — visual interface with grouped results, size/age info, and batch selection
+- **Native app** — Tauri v2 webview with a polished single-page UI
 - **App uninstaller** — lists installed apps with icons, finds all associated data (caches, preferences, containers), and removes everything in one click
 - **Spotlight maintenance** — check indexing status and trigger reindex from the UI
-- **Terminal TUI** — fully interactive terminal mode with arrow-key navigation
-- **Dry-run mode** — preview what would be cleaned without touching anything
-- **Native .app bundle** — launch from Spotlight like any macOS app
+- **Permissions checker** — see which macOS permissions are granted and open settings directly
 
 ## What It Scans
 
@@ -27,33 +25,18 @@ Zero runtime dependencies. One standalone binary. Everything is recoverable.
 
 ## Install
 
-Requires [Bun](https://bun.sh) to build (not needed at runtime).
+See **[INSTALL.md](INSTALL.md)** for full step-by-step instructions (prerequisites, build, permissions, troubleshooting).
+
+**Quick start** (requires [Rust](https://rustup.rs), [Tauri CLI](https://tauri.app), and [Bun](https://bun.sh)):
 
 ```bash
 git clone https://github.com/NOGIT007/clean-up.git
 cd clean-up
-bun install
 bun run build:app
 bun run install:app
 ```
 
-This installs **Clean Up.app** to `~/Applications` (Spotlight-indexed) and symlinks the CLI to `~/.local/bin/clean-up`.
-
-## Usage
-
-### Spotlight (recommended)
-
-Search for **"Clean Up"** in Spotlight. The app launches a local web UI in your browser.
-
-### Terminal
-
-```bash
-clean-up            # interactive TUI in terminal
-clean-up --web      # launch web UI instead
-clean-up --dry-run  # preview without deleting
-clean-up --version  # print version
-clean-up --help     # show all options
-```
+Then search for **"Clean Up"** in Spotlight.
 
 ## How It Works
 
@@ -64,36 +47,18 @@ clean-up --help     # show all options
 
 Nothing is permanently deleted. Every action requires your explicit confirmation.
 
-## Web UI
-
-The web interface has three tabs:
+## Tabs
 
 - **Clean** — run scanners, review results, select and trash items
 - **Uninstall** — browse installed apps with icons, see associated data across ~/Library, remove apps and all their data
-- **Spotlight** — check Spotlight indexing status and trigger a reindex (used by the unused apps scanner)
-
-## App Bundle Structure
-
-```
-Clean Up.app/Contents/
-  Info.plist              Bundle metadata
-  PkgInfo                 APPL????
-  MacOS/
-    clean-up              Native Swift launcher (no Terminal window)
-    clean-up-server       Standalone Bun binary (web server + scanners)
-  Resources/
-    AppIcon.icns          App icon
-    ui.html               Web UI (single-file, zero dependencies)
-```
-
-The Swift launcher starts the server process with `--web` and opens your browser. No Terminal window appears.
+- **Spotlight** — check Spotlight indexing status and trigger a reindex
+- **Permissions** — check macOS permissions (Full Disk Access, Automation, App Management)
 
 ## Security
 
-- **Zero dependencies** — no npm packages at runtime, single compiled binary
+- **Zero dependencies** — no npm packages at runtime, single compiled Rust binary
 - **Never calls `rm`** — everything goes through macOS Trash (recoverable)
 - **Path blocklist** — critical system paths (`/System`, `/Library`, `/usr`, etc.) are hardcoded as off-limits
-- **Localhost only** — the web server binds to `127.0.0.1` on a random port
 - **No network access** — fully offline, no telemetry, no updates
 - **You review everything** — nothing is trashed without explicit selection and confirmation
 
@@ -109,12 +74,12 @@ No other files are created outside the app bundle.
 ## First Launch
 
 - **Gatekeeper**: The app isn't notarized. Right-click → **Open** → click **Open** to bypass the warning once.
-- **Full Disk Access** (optional): Some scanners (Safari caches, iCloud data) need Full Disk Access. Go to System Settings → Privacy & Security → Full Disk Access and add Clean Up.app.
+- **Full Disk Access**: Some scanners need Full Disk Access. Go to System Settings → Privacy & Security → Full Disk Access and add Clean Up.app. This must be re-granted after each rebuild.
 
 ## Requirements
 
 - macOS 13.0+ (Ventura or later)
-- Apple Silicon or Intel Mac (binary matches build architecture)
+- Apple Silicon or Intel Mac
 
 ## License
 

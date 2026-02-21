@@ -72,17 +72,6 @@
         position: relative;
       }
 
-      /* Subtle grain texture */
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        opacity: 0.3;
-        pointer-events: none;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-        z-index: 9999;
-      }
-
       /* ============================================================
    LAYOUT
    ============================================================ */
@@ -1859,6 +1848,13 @@
     </div>
 
     <script>
+      // Global error handler for debugging
+      window.onerror = function (msg, url, line) {
+        console.error("JS Error:", msg, "at line", line);
+        const el = document.getElementById("versionTag");
+        if (el) el.textContent = "JS Error: " + msg;
+      };
+
       // Tauri IPC bridge
       const { invoke } = window.__TAURI__.core;
 
@@ -2913,71 +2909,62 @@
       // =========================================================================
       // Event Listeners (replaces inline onclick/onchange/oninput handlers)
       // =========================================================================
+      function bindEvent(id, event, handler) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener(event, handler);
+        else console.error("Missing element:", id);
+      }
 
       // Topbar navigation
-      document.getElementById("topbarNav").addEventListener("click", (e) => {
+      bindEvent("topbarNav", "click", (e) => {
         const btn = e.target.closest(".topbar-nav-btn");
         if (btn && btn.dataset.mode) switchMode(btn.dataset.mode);
       });
 
       // Scanner selection
-      document
-        .getElementById("scannerToggleBtn")
-        .addEventListener("click", toggleAllScanners);
-      document.getElementById("scanBtn").addEventListener("click", runScan);
+      bindEvent("scannerToggleBtn", "click", toggleAllScanners);
+      bindEvent("scanBtn", "click", runScan);
 
       // Scanner card clicks (event delegation)
-      document.getElementById("scannerGrid").addEventListener("click", (e) => {
+      bindEvent("scannerGrid", "click", (e) => {
         const card = e.target.closest(".scanner-card");
         if (card) toggleCard(card);
       });
 
       // Spotlight reindex
-      document
-        .getElementById("spotlightBtn")
-        .addEventListener("click", reindexSpotlight);
+      bindEvent("spotlightBtn", "click", reindexSpotlight);
 
       // Permissions check
-      document
-        .getElementById("permCheckBtn")
-        .addEventListener("click", loadPermissions);
+      bindEvent("permCheckBtn", "click", loadPermissions);
 
       // Results: back button, select-all checkbox
-      document.getElementById("backBtn").addEventListener("click", goBack);
-      document
-        .getElementById("selectAll")
-        .addEventListener("change", function () {
-          toggleAll(this.checked);
-        });
+      bindEvent("backBtn", "click", goBack);
+      bindEvent("selectAll", "change", function () {
+        toggleAll(this.checked);
+      });
 
       // Results: filter chips (event delegation)
-      document.getElementById("filterChips").addEventListener("click", (e) => {
+      bindEvent("filterChips", "click", (e) => {
         const chip = e.target.closest(".filter-chip");
         if (chip && chip.dataset.filter) toggleFilter(chip.dataset.filter);
       });
 
       // Results: sort headers + item checkboxes (event delegation)
-      document
-        .getElementById("resultsGroups")
-        .addEventListener("click", (e) => {
-          const sortEl = e.target.closest("[data-sort]");
-          if (sortEl) sortBy(sortEl.dataset.sort);
-        });
-      document
-        .getElementById("resultsGroups")
-        .addEventListener("change", (e) => {
-          if (e.target.type === "checkbox") onCheck();
-        });
+      bindEvent("resultsGroups", "click", (e) => {
+        const sortEl = e.target.closest("[data-sort]");
+        if (sortEl) sortBy(sortEl.dataset.sort);
+      });
+      bindEvent("resultsGroups", "change", (e) => {
+        if (e.target.type === "checkbox") onCheck();
+      });
 
       // App search input
-      document
-        .getElementById("appSearch")
-        .addEventListener("input", function () {
-          renderAppList(this.value);
-        });
+      bindEvent("appSearch", "input", function () {
+        renderAppList(this.value);
+      });
 
       // App list clicks (event delegation)
-      document.getElementById("appListBody").addEventListener("click", (e) => {
+      bindEvent("appListBody", "click", (e) => {
         const row = e.target.closest(".app-row");
         if (row) {
           const idx = parseInt(row.dataset.idx, 10);
@@ -2986,39 +2973,31 @@
       });
 
       // App detail: back, uninstall
-      document
-        .getElementById("backToAppsBtn")
-        .addEventListener("click", backToAppList);
-      document
-        .getElementById("uninstallBtn")
-        .addEventListener("click", doUninstall);
+      bindEvent("backToAppsBtn", "click", backToAppList);
+      bindEvent("uninstallBtn", "click", doUninstall);
 
       // App data checkboxes (event delegation)
-      document.getElementById("appDataList").addEventListener("change", (e) => {
+      bindEvent("appDataList", "change", (e) => {
         if (e.target.type === "checkbox") updateUninstallSummary();
       });
 
       // Confirm modal
-      document
-        .getElementById("cancelConfirmBtn")
-        .addEventListener("click", hideConfirm);
-      document.getElementById("confirmBtn").addEventListener("click", () => {
+      bindEvent("cancelConfirmBtn", "click", hideConfirm);
+      bindEvent("confirmBtn", "click", () => {
         if (confirmAction) confirmAction();
       });
 
       // Bottom bar trash button
-      document
-        .getElementById("trashBtn")
-        .addEventListener("click", showConfirm);
+      bindEvent("trashBtn", "click", showConfirm);
 
       // Permission settings open buttons (event delegation)
-      document.getElementById("permList").addEventListener("click", (e) => {
+      bindEvent("permList", "click", (e) => {
         const btn = e.target.closest(".perm-open-btn");
         if (btn && btn.dataset.deepLink) openPermSettings(btn.dataset.deepLink);
       });
 
       // Toast "Open Trash" link (event delegation)
-      document.getElementById("toast").addEventListener("click", (e) => {
+      bindEvent("toast", "click", (e) => {
         const link = e.target.closest("#openTrashLink");
         if (link) {
           e.preventDefault();
