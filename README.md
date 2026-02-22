@@ -8,6 +8,19 @@ Zero runtime dependencies. One standalone binary. Everything is recoverable.
   <img src="docs/screenshot.png" alt="Clean Up — scanner selection" width="500">
 </p>
 
+## Download
+
+Grab the latest `.dmg` from the [Releases page](https://github.com/NOGIT007/clean-up/releases).
+
+**Install steps (unsigned app):**
+
+1. Open the DMG and drag **Clean Up** to Applications
+2. On first launch macOS will block it — go to **System Settings → Privacy & Security**
+3. Click **"Open Anyway"** next to the Clean Up warning
+4. For full scanner coverage, grant **Full Disk Access** (System Settings → Privacy & Security → Full Disk Access)
+
+Requires **macOS 13.0+** (Ventura or later) on Apple Silicon or Intel.
+
 ## Features
 
 - **6 scanners** — dev artifacts, system caches, app leftovers, large/old files, unused apps, Homebrew cleanup

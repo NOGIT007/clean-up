@@ -62,6 +62,14 @@ cp -R "$TAURI_OUT" "$DIST/Clean Up.app"
 # Remove target bundle copy to prevent duplicate Spotlight entries
 rm -rf "$TAURI_OUT"
 
+# Copy DMG if it was built
+DMG_OUT="$PROJECT_DIR/src-tauri/target/release/bundle/dmg"
+DMG_FILE=$(find "$DMG_OUT" -name "*.dmg" 2>/dev/null | head -1)
+if [ -n "$DMG_FILE" ]; then
+    cp "$DMG_FILE" "$DIST/Clean Up.dmg"
+    echo "    DMG:     dist/Clean Up.dmg"
+fi
+
 echo ""
 echo "==> Build complete: dist/Clean Up.app/"
 echo ""
@@ -70,5 +78,8 @@ if [ -f "$BINARY" ]; then
     ls -lh "$BINARY" | awk '{print "    Binary:  " $5}'
 fi
 echo "    Bundle:  dist/Clean Up.app/"
+if [ -f "$DIST/Clean Up.dmg" ]; then
+    ls -lh "$DIST/Clean Up.dmg" | awk '{print "    DMG:     " $5}'
+fi
 echo ""
 echo "Run 'bun run install:app' to install to ~/Applications."
