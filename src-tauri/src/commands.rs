@@ -331,42 +331,74 @@ async fn fetch_app_icon(app_path: &str) -> Option<Vec<u8>> {
     }
 
     let icns_path = format!("{}/Contents/Resources/{}", app_path, icon_name);
-    if !crate::utils::fs::path_exists(std::path::Path::new(&icns_path)).await {
-        return None;
-    }
 
-    // Convert icns to 64x64 PNG using sips (built-in macOS tool)
-    let tmp_png = format!(
-        "/tmp/clean-up-icon-{}-{}.png",
-        std::process::id(),
-        rand_suffix()
-    );
-
-    let output = Command::new("sips")
-        .args([
-            "-s", "format", "png", "-z", "64", "64", &icns_path, "--out", &tmp_png,
-        ])
-        .output()
-        .await
-        .ok()?;
-
-    if !output.status.success() {
-        return None;
-    }
-
-    let data = tokio::fs::read(&tmp_png).await.ok()?;
-    // Clean up temp file
-    let _ = tokio::fs::remove_file(&tmp_png).await;
-
-    Some(data)
+    // Read icns file and extract embedded PNG directly (no sips needed)
+    let icns_data = tokio::fs::read(&icns_path).await.ok()?;
+    extract_png_from_icns(&icns_data)
 }
 
-/// Generate a short random suffix for temp files.
-fn rand_suffix() -> String {
-    use std::time::SystemTime;
-    let nanos = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap_or_default()
-        .subsec_nanos();
-    format!("{:x}", nanos)
+/// Icon types preferred for ~64px display, best to worst.
+/// Modern icns files embed PNG data directly for these types.
+const PREFERRED_ICON_TYPES: &[[u8; 4]] = &[
+    *b"ic12", // 64x64@2x (128x128 Retina)
+    *b"ic11", // 32x32@2x (64x64 Retina)
+    *b"ic07", // 128x128
+    *b"icp5", // 32x32
+    *b"ic08", // 256x256
+    *b"ic13", // 128x128@2x
+    *b"ic09", // 512x512
+    *b"ic10", // 1024x1024
+    *b"ic14", // 256x256@2x
+];
+
+/// Extract an embedded PNG from an .icns file by parsing its binary format.
+fn extract_png_from_icns(data: &[u8]) -> Option<Vec<u8>> {
+    if data.len() < 8 || &data[0..4] != b"icns" {
+        return None;
+    }
+
+    let mut best: Option<(usize, &[u8])> = None; // (priority, data)
+    let mut pos = 8;
+
+    while pos + 8 <= data.len() {
+        let icon_type: [u8; 4] = [data[pos], data[pos + 1], data[pos + 2], data[pos + 3]];
+        let entry_size = u32::from_be_bytes([
+            data[pos + 4],
+            data[pos + 5],
+            data[pos + 6],
+            data[pos + 7],
+        ]) as usize;
+
+        if entry_size < 8 || pos + entry_size > data.len() {
+            break;
+        }
+
+        let entry_data = &data[pos + 8..pos + entry_size];
+
+        // Check if entry contains PNG data (PNG magic: 0x89 P N G)
+        if entry_data.len() >= 8
+            && entry_data[0] == 0x89
+            && entry_data[1] == 0x50
+            && entry_data[2] == 0x4E
+            && entry_data[3] == 0x47
+        {
+            for (priority, preferred) in PREFERRED_ICON_TYPES.iter().enumerate() {
+                if icon_type == *preferred {
+                    match &best {
+                        Some((best_p, _)) if *best_p <= priority => {}
+                        _ => best = Some((priority, entry_data)),
+                    }
+                    break;
+                }
+            }
+            // Use as fallback if no priority match yet
+            if best.is_none() {
+                best = Some((usize::MAX, entry_data));
+            }
+        }
+
+        pos += entry_size;
+    }
+
+    best.map(|(_, d)| d.to_vec())
 }

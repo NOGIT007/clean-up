@@ -60,12 +60,27 @@ static SKIP_DIRS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
 });
 
 /// Check if a path is inside a git repository (has .git ancestor).
-async fn is_inside_git_repo(dir_path: &Path, home: &str) -> bool {
+/// Uses a cache to avoid repeated ancestor walks.
+fn is_inside_git_repo_cached(
+    dir_path: &Path,
+    home: &str,
+    cache: &mut std::collections::HashMap<PathBuf, bool>,
+) -> bool {
+    if let Some(&cached) = cache.get(dir_path) {
+        return cached;
+    }
+
     let mut current = dir_path.to_path_buf();
     let home_len = home.len();
 
     while current.to_string_lossy().len() >= home_len && current != Path::new("/") {
-        if tokio::fs::metadata(current.join(".git")).await.is_ok() {
+        if let Some(&cached) = cache.get(&current) {
+            cache.insert(dir_path.to_path_buf(), cached);
+            return cached;
+        }
+        if current.join(".git").exists() {
+            cache.insert(current, true);
+            cache.insert(dir_path.to_path_buf(), true);
             return true;
         }
         match current.parent() {
@@ -74,69 +89,58 @@ async fn is_inside_git_repo(dir_path: &Path, home: &str) -> bool {
         }
     }
 
+    cache.insert(dir_path.to_path_buf(), false);
     false
 }
 
-/// Create and run the large/old files scanner.
-pub async fn scan() -> ScanResult {
-    let start = Instant::now();
-    let home = match std::env::var("HOME") {
-        Ok(h) => h,
-        Err(_) => {
-            return ScanResult {
-                scanner_name: "Large & Old Files".to_string(),
-                findings: Vec::new(),
-                total_size: 0,
-                duration: 0,
-            };
-        }
-    };
-
+/// Walk a single subtree for large/old files (runs in spawn_blocking).
+fn walk_subtree_sync(
+    start_dir: PathBuf,
+    start_depth: usize,
+    home: String,
+) -> Vec<Finding> {
     let mut findings = Vec::new();
+    let mut git_cache = std::collections::HashMap::new();
     let mut queue: VecDeque<(PathBuf, usize)> = VecDeque::new();
-    queue.push_back((PathBuf::from(&home), 0));
+    queue.push_back((start_dir, start_depth));
 
     while let Some((dir_path, depth)) = queue.pop_front() {
-        if findings.len() >= MAX_FINDINGS {
-            break;
-        }
         if depth > MAX_DEPTH {
             continue;
         }
 
-        let entries = safe_readdir_with_types(&dir_path).await;
+        let entries = match std::fs::read_dir(&dir_path) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
 
-        for entry in entries {
-            if findings.len() >= MAX_FINDINGS {
-                break;
-            }
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            let meta = match entry.metadata() {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+            let is_dir = meta.is_dir();
 
             // Skip hidden dirs and known skip dirs
-            if entry.name.starts_with('.') && entry.is_directory {
-                if SKIP_DIRS.contains(entry.name.as_str()) {
+            if name.starts_with('.') && is_dir {
+                if SKIP_DIRS.contains(name.as_str()) {
                     continue;
                 }
-                // Skip all hidden dirs at depth 0 (home level)
-                if depth == 0 {
-                    continue;
-                }
+                continue; // skip all hidden dirs in subtrees
             }
 
-            if SKIP_DIRS.contains(entry.name.as_str()) {
+            if SKIP_DIRS.contains(name.as_str()) {
                 continue;
             }
 
-            if entry.is_directory {
-                queue.push_back((entry.path, depth + 1));
+            if is_dir {
+                queue.push_back((path, depth + 1));
                 continue;
             }
 
             // It's a file -- check size and age
-            let meta = match tokio::fs::metadata(&entry.path).await {
-                Ok(m) => m,
-                Err(_) => continue,
-            };
-
             let size = meta.len();
             let age = meta
                 .modified()
@@ -152,9 +156,8 @@ pub async fn scan() -> ScanResult {
                 continue;
             }
 
-            // Files inside git repos must be BOTH large AND old
-            let parent_dir = entry.path.parent().unwrap_or(Path::new("/"));
-            let in_repo = is_inside_git_repo(parent_dir, &home).await;
+            let parent_dir = path.parent().unwrap_or(Path::new("/"));
+            let in_repo = is_inside_git_repo_cached(parent_dir, &home, &mut git_cache);
             if in_repo && !(is_large && is_old) {
                 continue;
             }
@@ -170,10 +173,10 @@ pub async fn scan() -> ScanResult {
                 reasons.push("Not modified in over a year".to_string());
             }
 
-            let display_path = entry.path.to_string_lossy().replace(&home, "~");
+            let display_path = path.to_string_lossy().replace(&home, "~");
 
             findings.push(Finding {
-                path: entry.path.to_string_lossy().to_string(),
+                path: path.to_string_lossy().to_string(),
                 label: display_path,
                 size,
                 age,
@@ -183,8 +186,55 @@ pub async fn scan() -> ScanResult {
         }
     }
 
-    // Sort by size descending
+    findings
+}
+
+/// Create and run the large/old files scanner.
+/// Fans out one task per top-level subdirectory for parallelism.
+pub async fn scan() -> ScanResult {
+    let start = Instant::now();
+    let home = match std::env::var("HOME") {
+        Ok(h) => h,
+        Err(_) => {
+            return ScanResult {
+                scanner_name: "Large & Old Files".to_string(),
+                findings: Vec::new(),
+                total_size: 0,
+                duration: 0,
+            };
+        }
+    };
+
+    let top_entries = safe_readdir_with_types(Path::new(&home)).await;
+
+    let mut handles = Vec::new();
+    for entry in top_entries {
+        if !entry.is_directory {
+            continue;
+        }
+        if SKIP_DIRS.contains(entry.name.as_str()) {
+            continue;
+        }
+        if entry.name.starts_with('.') {
+            continue;
+        }
+
+        let home = home.clone();
+        handles.push(tokio::task::spawn_blocking(move || {
+            walk_subtree_sync(entry.path, 1, home)
+        }));
+    }
+
+    let mut findings = Vec::new();
+    for handle in handles {
+        if let Ok(subtree_findings) = handle.await {
+            findings.extend(subtree_findings);
+        }
+    }
+
+    // Sort by size descending, cap at MAX_FINDINGS
     findings.sort_by(|a, b| b.size.cmp(&a.size));
+    findings.truncate(MAX_FINDINGS);
 
     let total_size = findings.iter().map(|f| f.size).sum();
 

@@ -3,7 +3,6 @@
 
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use tokio::process::Command;
 
 /// Entry from a directory listing, including type info.
 pub struct DirEntry {
@@ -12,8 +11,34 @@ pub struct DirEntry {
     pub is_directory: bool,
 }
 
+/// Synchronously calculate directory size by walking with a stack.
+pub fn get_size_sync(path: &Path) -> u64 {
+    let mut total: u64 = 0;
+    let mut stack = vec![path.to_path_buf()];
+
+    while let Some(dir) = stack.pop() {
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            let meta = match entry.metadata() {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+            if meta.is_file() {
+                total += meta.len();
+            } else if meta.is_dir() {
+                stack.push(entry.path());
+            }
+        }
+    }
+
+    total
+}
+
 /// Get the size of a file or directory in bytes.
-/// For directories, shells out to `du -sk` for accuracy.
+/// For directories, walks recursively using pure Rust (no subprocess).
 pub async fn get_size(path: &Path) -> u64 {
     let meta = match tokio::fs::metadata(path).await {
         Ok(m) => m,
@@ -24,20 +49,26 @@ pub async fn get_size(path: &Path) -> u64 {
         return meta.len();
     }
 
-    // For directories, use du -sk (size in KB)
-    match Command::new("du")
-        .args(["-sk"])
-        .arg(path)
-        .output()
+    let path = path.to_path_buf();
+    tokio::task::spawn_blocking(move || get_size_sync(&path))
         .await
-    {
-        Ok(output) if output.status.success() => {
-            let text = String::from_utf8_lossy(&output.stdout);
-            let kb_str = text.trim().split('\t').next().unwrap_or("0");
-            kb_str.parse::<u64>().unwrap_or(0) * 1024
-        }
-        _ => 0,
-    }
+        .unwrap_or(0)
+}
+
+/// Synchronously get the age of a file/directory in milliseconds.
+pub fn get_file_age_sync(path: &Path) -> u64 {
+    let meta = match std::fs::metadata(path) {
+        Ok(m) => m,
+        Err(_) => return 0,
+    };
+    let modified = match meta.modified() {
+        Ok(t) => t,
+        Err(_) => return 0,
+    };
+    SystemTime::now()
+        .duration_since(modified)
+        .unwrap_or_default()
+        .as_millis() as u64
 }
 
 /// Get the age of a file/directory in milliseconds since last modification.

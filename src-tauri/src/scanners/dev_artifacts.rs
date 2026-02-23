@@ -3,9 +3,9 @@
 //! node_modules, .next, dist, .venv, target, __pycache__, etc.
 
 use crate::types::{Effort, Finding, ScanResult};
-use crate::utils::fs::{get_file_age, get_size, safe_readdir_with_types};
+use crate::utils::fs::{get_file_age_sync, get_size_sync};
 use std::collections::{HashSet, VecDeque};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::time::Instant;
 
@@ -65,68 +65,100 @@ const MAX_DEPTH: usize = 5;
 /// Minimum size to report (skip tiny artifacts).
 const MIN_SIZE: u64 = 1024 * 1024; // 1 MB
 
-/// Walk directories looking for dev artifacts using BFS with depth limiting.
-async fn find_dev_artifacts(start_dir: &Path) -> Vec<Finding> {
-    let mut findings = Vec::new();
-    let home = std::env::var("HOME").unwrap_or_default();
+/// A found artifact path (before size calculation).
+struct FoundArtifact {
+    path: PathBuf,
+    name: String,
+    parent_display: String,
+    reason: String,
+    effort: Effort,
+}
 
-    let mut queue: VecDeque<(std::path::PathBuf, usize)> = VecDeque::new();
-    queue.push_back((start_dir.to_path_buf(), 0));
+/// Phase 1: Fast synchronous BFS walk to find all artifact paths.
+/// No size calculation — just locate directories matching artifact names.
+fn find_artifacts_sync(home: &str) -> Vec<FoundArtifact> {
+    let mut artifacts = Vec::new();
+    let mut queue: VecDeque<(PathBuf, usize)> = VecDeque::new();
+    let home_path = Path::new(home);
+
+    let entries = match std::fs::read_dir(home_path) {
+        Ok(e) => e,
+        Err(_) => return artifacts,
+    };
+
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+        if !is_dir {
+            continue;
+        }
+        if SKIP_DIRS.contains(name.as_str()) {
+            continue;
+        }
+        if name.starts_with('.') && !DEV_ARTIFACT_NAMES.contains_key(name.as_str()) {
+            continue;
+        }
+
+        if let Some(artifact) = DEV_ARTIFACT_NAMES.get(name.as_str()) {
+            artifacts.push(FoundArtifact {
+                path: entry.path(),
+                name,
+                parent_display: "~".to_string(),
+                reason: artifact.reason.to_string(),
+                effort: artifact.effort.clone(),
+            });
+            continue;
+        }
+
+        queue.push_back((entry.path(), 1));
+    }
 
     while let Some((dir_path, depth)) = queue.pop_front() {
         if depth > MAX_DEPTH {
             continue;
         }
 
-        let entries = safe_readdir_with_types(&dir_path).await;
+        let entries = match std::fs::read_dir(&dir_path) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
 
-        for entry in entries {
-            // Skip hidden dirs and known non-project dirs at top level
-            if entry.name.starts_with('.') && !DEV_ARTIFACT_NAMES.contains_key(entry.name.as_str())
-            {
-                if SKIP_DIRS.contains(entry.name.as_str()) {
-                    continue;
-                }
-            }
-
-            if !entry.is_directory {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+            if !is_dir {
                 continue;
             }
 
-            if let Some(artifact) = DEV_ARTIFACT_NAMES.get(entry.name.as_str()) {
-                // Found an artifact — measure it but don't descend into it
-                let size = get_size(&entry.path).await;
-                if size >= MIN_SIZE {
-                    let age = get_file_age(&entry.path).await;
-                    let parent_display = dir_path
-                        .to_string_lossy()
-                        .replace(&home, "~");
-                    findings.push(Finding {
-                        path: entry.path.to_string_lossy().to_string(),
-                        label: format!("{} in {}", entry.name, parent_display),
-                        size,
-                        age,
-                        reason: artifact.reason.to_string(),
-                        effort: Some(artifact.effort.clone()),
-                    });
-                }
+            if let Some(artifact) = DEV_ARTIFACT_NAMES.get(name.as_str()) {
+                let parent_display = dir_path.to_string_lossy().replace(home, "~");
+                artifacts.push(FoundArtifact {
+                    path: entry.path(),
+                    name,
+                    parent_display,
+                    reason: artifact.reason.to_string(),
+                    effort: artifact.effort.clone(),
+                });
+                continue; // Don't recurse into artifacts
+            }
+
+            if SKIP_DIRS.contains(name.as_str()) {
+                continue;
+            }
+            if name.starts_with('.') {
                 continue;
             }
 
-            // Skip known non-project directories
-            if SKIP_DIRS.contains(entry.name.as_str()) {
-                continue;
-            }
-
-            // Recurse into this directory
-            queue.push_back((entry.path, depth + 1));
+            queue.push_back((entry.path(), depth + 1));
         }
     }
 
-    findings
+    artifacts
 }
 
 /// Create and run the dev artifacts scanner.
+/// Phase 1: sync walk to find artifact paths (fast).
+/// Phase 2: parallel size calculations via spawn_blocking.
 pub async fn scan() -> ScanResult {
     let start = Instant::now();
     let home = match std::env::var("HOME") {
@@ -141,7 +173,38 @@ pub async fn scan() -> ScanResult {
         }
     };
 
-    let mut findings = find_dev_artifacts(Path::new(&home)).await;
+    // Phase 1: Find all artifact paths (fast sync walk)
+    let home_clone = home.clone();
+    let artifacts = tokio::task::spawn_blocking(move || find_artifacts_sync(&home_clone))
+        .await
+        .unwrap_or_default();
+
+    // Phase 2: Calculate sizes in parallel
+    let mut handles = Vec::new();
+    for artifact in artifacts {
+        handles.push(tokio::task::spawn_blocking(move || {
+            let size = get_size_sync(&artifact.path);
+            if size < MIN_SIZE {
+                return None;
+            }
+            let age = get_file_age_sync(&artifact.path);
+            Some(Finding {
+                path: artifact.path.to_string_lossy().to_string(),
+                label: format!("{} in {}", artifact.name, artifact.parent_display),
+                size,
+                age,
+                reason: artifact.reason,
+                effort: Some(artifact.effort),
+            })
+        }));
+    }
+
+    let mut findings = Vec::new();
+    for handle in handles {
+        if let Ok(Some(f)) = handle.await {
+            findings.push(f);
+        }
+    }
 
     // Sort by size descending
     findings.sort_by(|a, b| b.size.cmp(&a.size));

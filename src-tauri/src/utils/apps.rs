@@ -14,11 +14,19 @@ static BUNDLE_ID_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[a-zA-Z][a-zA-Z0-9-]*\.[a-zA-Z][a-zA-Z0-9.-]*$").unwrap()
 });
 
+/// Regex for parsing kMDItemCFBundleIdentifier from mdls output.
+static BUNDLE_ID_MDLS_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"kMDItemCFBundleIdentifier\s*=\s*"([^"]+)""#).unwrap()
+});
+
+/// Regex for parsing kMDItemDisplayName from mdls output.
+static DISPLAY_NAME_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"kMDItemDisplayName\s*=\s*"([^"]+)""#).unwrap()
+});
+
 /// Minimum app size to show in the uninstaller list.
 const MIN_APP_SIZE: u64 = 1024 * 1024; // 1 MB
 
-/// Batch size for mdls subprocess calls.
-const BATCH_SIZE: usize = 50;
 
 /// ~/Library subdirectories to scan for associated app data.
 const LIBRARY_SUBDIRS: &[&str] = &[
@@ -41,7 +49,7 @@ const SYSTEM_PREFIXES: &[&str] = &[
 ];
 
 /// Get a set of currently installed app bundle identifiers.
-/// Uses `mdfind` + `mdls` to query Spotlight.
+/// Uses `mdfind` + a single batched `mdls` call to query Spotlight.
 pub async fn get_installed_apps() -> HashSet<String> {
     let mut bundle_ids = HashSet::new();
 
@@ -57,43 +65,29 @@ pub async fn get_installed_apps() -> HashSet<String> {
     let text = String::from_utf8_lossy(&output.stdout);
     let app_paths: Vec<&str> = text.trim().split('\n').filter(|s| !s.is_empty()).collect();
 
-    // Process in batches
-    for batch in app_paths.chunks(BATCH_SIZE) {
-        let mut handles = Vec::new();
-        for app_path in batch {
-            let app_path = app_path.to_string();
-            handles.push(tokio::spawn(async move {
-                get_bundle_id_from_mdls(&app_path).await
-            }));
-        }
-        for handle in handles {
-            if let Ok(Some(id)) = handle.await {
-                bundle_ids.insert(id.to_lowercase());
+    if app_paths.is_empty() {
+        return bundle_ids;
+    }
+
+    // Single mdls call for ALL paths — no per-path correlation needed
+    let mut cmd = Command::new("mdls");
+    cmd.args(["-name", "kMDItemCFBundleIdentifier"]);
+    for path in &app_paths {
+        cmd.arg(*path);
+    }
+
+    if let Ok(output) = cmd.output().await {
+        let text = String::from_utf8_lossy(&output.stdout);
+        for line in text.lines() {
+            if let Some(start) = line.find('"') {
+                if let Some(end) = line[start + 1..].find('"') {
+                    bundle_ids.insert(line[start + 1..start + 1 + end].to_lowercase());
+                }
             }
         }
     }
 
     bundle_ids
-}
-
-/// Get bundle ID from mdls for a single app path.
-async fn get_bundle_id_from_mdls(app_path: &str) -> Option<String> {
-    let output = Command::new("mdls")
-        .args(["-name", "kMDItemCFBundleIdentifier", app_path])
-        .output()
-        .await
-        .ok()?;
-
-    let text = String::from_utf8_lossy(&output.stdout);
-    extract_quoted_value(&text)
-}
-
-/// Extract a quoted string value from mdls output.
-/// Matches: kMDItemSomething = "value"
-fn extract_quoted_value(text: &str) -> Option<String> {
-    let start = text.find('"')? + 1;
-    let end = text[start..].find('"')? + start;
-    Some(text[start..end].to_string())
 }
 
 /// Extract a likely bundle ID from a directory name.
@@ -117,6 +111,7 @@ pub fn is_system_bundle_id(bundle_id: &str) -> bool {
 
 /// Get a list of installed non-system apps with display name, path,
 /// bundle ID, and size. Filters out system apps and tiny bundles.
+/// Uses a single batched mdls call instead of one subprocess per app.
 pub async fn get_installed_apps_list() -> Vec<AppInfo> {
     let output = match Command::new("mdfind")
         .arg("kMDItemContentTypeTree == com.apple.application-bundle")
@@ -140,81 +135,103 @@ pub async fn get_installed_apps_list() -> Vec<AppInfo> {
         .map(String::from)
         .collect();
 
-    let mut apps = Vec::new();
-
-    for batch in app_paths.chunks(BATCH_SIZE) {
-        let mut handles = Vec::new();
-        for app_path in batch {
-            let app_path = app_path.clone();
-            handles.push(tokio::spawn(async move {
-                get_app_info(&app_path).await
-            }));
-        }
-        for handle in handles {
-            if let Ok(Some(info)) = handle.await {
-                apps.push(info);
-            }
-        }
+    if app_paths.is_empty() {
+        return Vec::new();
     }
 
-    apps.sort_by(|a, b| a.name.cmp(&b.name));
-    apps
-}
+    // Single mdls call for ALL paths
+    let mut cmd = Command::new("mdls");
+    cmd.args(["-name", "kMDItemCFBundleIdentifier", "-name", "kMDItemDisplayName"]);
+    for path in &app_paths {
+        cmd.arg(path);
+    }
 
-/// Get app info for a single .app path via mdls.
-async fn get_app_info(app_path: &str) -> Option<AppInfo> {
-    let output = Command::new("mdls")
-        .args([
-            "-name",
-            "kMDItemCFBundleIdentifier",
-            "-name",
-            "kMDItemDisplayName",
-            app_path,
-        ])
-        .output()
-        .await
-        .ok()?;
-
-    let text = String::from_utf8_lossy(&output.stdout);
-
-    // Parse bundle ID
-    let bundle_id = {
-        let re = Regex::new(r#"kMDItemCFBundleIdentifier\s*=\s*"([^"]+)""#).ok()?;
-        let caps = re.captures(&text)?;
-        caps.get(1)?.as_str().to_string()
+    let mdls_output = match cmd.output().await {
+        Ok(o) => o,
+        _ => return Vec::new(),
     };
 
-    if is_system_bundle_id(&bundle_id) {
-        return None;
+    let mdls_text = String::from_utf8_lossy(&mdls_output.stdout);
+
+    // Parse per-app metadata from the single mdls output.
+    // Each app block starts with a kMDItemCFBundleIdentifier line.
+    let mut app_metadata: Vec<(Option<String>, Option<String>)> = Vec::new();
+    let mut current_bundle_id: Option<String> = None;
+    let mut current_display_name: Option<String> = None;
+    let mut seen_first = false;
+
+    for line in mdls_text.lines() {
+        if line.contains("kMDItemCFBundleIdentifier") {
+            if seen_first {
+                app_metadata.push((current_bundle_id.take(), current_display_name.take()));
+            }
+            seen_first = true;
+            current_bundle_id = BUNDLE_ID_MDLS_RE
+                .captures(line)
+                .and_then(|c| c.get(1))
+                .map(|m| m.as_str().to_string());
+        } else if line.contains("kMDItemDisplayName") {
+            current_display_name = DISPLAY_NAME_RE
+                .captures(line)
+                .and_then(|c| c.get(1))
+                .map(|m| m.as_str().to_string());
+        }
+    }
+    if seen_first {
+        app_metadata.push((current_bundle_id, current_display_name));
     }
 
-    // Parse display name
-    let display_name = {
-        let re = Regex::new(r#"kMDItemDisplayName\s*=\s*"([^"]+)""#).ok();
-        re.and_then(|r| r.captures(&text))
-            .and_then(|c| c.get(1))
-            .map(|m| m.as_str().to_string())
-            .unwrap_or_else(|| {
-                Path::new(app_path)
+    // Spawn parallel size lookups only for non-system apps
+    let mut handles = Vec::new();
+
+    for (i, app_path) in app_paths.into_iter().enumerate() {
+        let (bundle_id, display_name) = app_metadata
+            .get(i)
+            .cloned()
+            .unwrap_or((None, None));
+
+        let bundle_id = match bundle_id {
+            Some(id) => id,
+            None => continue,
+        };
+
+        if is_system_bundle_id(&bundle_id) {
+            continue;
+        }
+
+        handles.push(tokio::spawn(async move {
+            let display_name = display_name.unwrap_or_else(|| {
+                Path::new(&app_path)
                     .file_name()
                     .unwrap_or_default()
                     .to_string_lossy()
                     .trim_end_matches(".app")
                     .to_string()
-            })
-    };
+            });
 
-    let app_size = get_size(Path::new(app_path)).await;
-    if app_size < MIN_APP_SIZE {
-        return None;
+            let app_size = get_size(Path::new(&app_path)).await;
+            if app_size < MIN_APP_SIZE {
+                return None;
+            }
+
+            Some(AppInfo {
+                name: display_name,
+                path: app_path,
+                bundle_id,
+                app_size,
+            })
+        }));
     }
 
-    Some(AppInfo {
-        name: display_name,
-        path: app_path.to_string(),
-        bundle_id,
-        app_size,
-    })
+    let mut apps = Vec::new();
+    for handle in handles {
+        if let Ok(Some(info)) = handle.await {
+            apps.push(info);
+        }
+    }
+
+    apps.sort_by(|a, b| a.name.cmp(&b.name));
+    apps
 }
 
 /// Find all associated data in ~/Library for a given app.
@@ -314,15 +331,4 @@ mod tests {
         assert!(!is_system_bundle_id("com.google.Chrome"));
     }
 
-    #[test]
-    fn extract_quoted_value_works() {
-        assert_eq!(
-            extract_quoted_value(r#"kMDItemCFBundleIdentifier = "com.example.app""#),
-            Some("com.example.app".to_string())
-        );
-        assert_eq!(
-            extract_quoted_value("kMDItemCFBundleIdentifier = (null)"),
-            None
-        );
-    }
 }

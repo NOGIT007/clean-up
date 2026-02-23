@@ -7,7 +7,7 @@ use crate::utils::apps::{extract_bundle_id, get_installed_apps, is_system_bundle
 use crate::utils::fs::{get_file_age, get_size, safe_readdir};
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use std::time::Instant;
 
 /// ~/Library subdirectories to scan for orphaned app data.
@@ -48,59 +48,69 @@ pub async fn scan() -> ScanResult {
     };
 
     // Get currently installed apps
-    let installed_apps = get_installed_apps().await;
-    let mut findings = Vec::new();
+    let installed_apps = Arc::new(get_installed_apps().await);
+    let mut handles = Vec::new();
 
     for subdir in LIBRARY_SUBDIRS {
         let dir_path = PathBuf::from(&home).join("Library").join(subdir);
-        let entries = safe_readdir(&dir_path).await;
+        let installed_apps = Arc::clone(&installed_apps);
+        let subdir = *subdir;
 
-        for entry_path in &entries {
-            let name = match entry_path.file_name() {
-                Some(n) => n.to_string_lossy().to_string(),
-                None => continue,
-            };
+        handles.push(tokio::spawn(async move {
+            let entries = safe_readdir(&dir_path).await;
+            let mut findings = Vec::new();
 
-            // Skip hidden files and known safe entries
-            if name.starts_with('.') {
-                continue;
+            for entry_path in &entries {
+                let name = match entry_path.file_name() {
+                    Some(n) => n.to_string_lossy().to_string(),
+                    None => continue,
+                };
+
+                if name.starts_with('.') {
+                    continue;
+                }
+                if ALWAYS_SKIP.contains(name.to_lowercase().as_str()) {
+                    continue;
+                }
+
+                let bundle_id = match extract_bundle_id(&name) {
+                    Some(id) => id,
+                    None => continue,
+                };
+
+                if is_system_bundle_id(&bundle_id) {
+                    continue;
+                }
+
+                if installed_apps.contains(&bundle_id) {
+                    continue;
+                }
+
+                let size = get_size(entry_path).await;
+                if size < MIN_SIZE {
+                    continue;
+                }
+
+                let age = get_file_age(entry_path).await;
+
+                findings.push(Finding {
+                    path: entry_path.to_string_lossy().to_string(),
+                    label: format!("{} in ~/Library/{}", name, subdir),
+                    size,
+                    age,
+                    reason: format!("Data from uninstalled app ({})", bundle_id),
+                    effort: Some(Effort::None),
+                });
             }
-            if ALWAYS_SKIP.contains(name.to_lowercase().as_str()) {
-                continue;
-            }
 
-            // Try to extract a bundle ID
-            let bundle_id = match extract_bundle_id(&name) {
-                Some(id) => id,
-                None => continue,
-            };
+            findings
+        }));
+    }
 
-            // Skip Apple/system services
-            if is_system_bundle_id(&bundle_id) {
-                continue;
-            }
-
-            // Skip if app is currently installed
-            if installed_apps.contains(&bundle_id) {
-                continue;
-            }
-
-            // This looks like orphaned data -- measure it
-            let size = get_size(entry_path).await;
-            if size < MIN_SIZE {
-                continue;
-            }
-
-            let age = get_file_age(entry_path).await;
-
-            findings.push(Finding {
-                path: entry_path.to_string_lossy().to_string(),
-                label: format!("{} in ~/Library/{}", name, subdir),
-                size,
-                age,
-                reason: format!("Data from uninstalled app ({})", bundle_id),
-                effort: Some(Effort::None),
-            });
+    let mut findings = Vec::new();
+    for handle in handles {
+        if let Ok(subdir_findings) = handle.await {
+            findings.extend(subdir_findings);
         }
     }
 

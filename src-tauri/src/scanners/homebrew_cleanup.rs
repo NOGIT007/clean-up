@@ -6,8 +6,15 @@ use crate::types::ScanResult;
 use crate::utils::fs::{get_size, path_exists};
 use regex::Regex;
 use std::path::Path;
+use std::sync::LazyLock;
 use std::time::Instant;
 use tokio::process::Command;
+
+static CELLAR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"/Cellar/([^/]+)/([^/]+)").unwrap());
+static CASK_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"/Caskroom/([^/]+)/([^/]+)").unwrap());
+static PATH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(/\S+)").unwrap());
 
 /// Find the brew binary path, or None if not installed.
 async fn find_brew_path() -> Option<String> {
@@ -38,9 +45,7 @@ async fn find_brew_path() -> Option<String> {
 
 /// Classify a path from brew cleanup output into a human-readable label.
 fn classify_path(file_path: &str) -> (String, String) {
-    // /Cellar/<name>/<version>
-    let cellar_re = Regex::new(r"/Cellar/([^/]+)/([^/]+)").unwrap();
-    if let Some(caps) = cellar_re.captures(file_path) {
+    if let Some(caps) = CELLAR_RE.captures(file_path) {
         let name = caps.get(1).unwrap().as_str();
         let version = caps.get(2).unwrap().as_str();
         return (
@@ -49,9 +54,7 @@ fn classify_path(file_path: &str) -> (String, String) {
         );
     }
 
-    // /Caskroom/<name>/<version>
-    let cask_re = Regex::new(r"/Caskroom/([^/]+)/([^/]+)").unwrap();
-    if let Some(caps) = cask_re.captures(file_path) {
+    if let Some(caps) = CASK_RE.captures(file_path) {
         let name = caps.get(1).unwrap().as_str();
         let version = caps.get(2).unwrap().as_str();
         return (
@@ -114,12 +117,11 @@ pub async fn scan() -> ScanResult {
     let text = String::from_utf8_lossy(&output.stdout);
     let lines: Vec<&str> = text.trim().split('\n').filter(|s| !s.is_empty()).collect();
 
-    let path_re = Regex::new(r"(/\S+)").unwrap();
     let mut findings = Vec::new();
 
     let mut handles = Vec::new();
     for line in lines {
-        if let Some(caps) = path_re.captures(line) {
+        if let Some(caps) = PATH_RE.captures(line) {
             let file_path = caps.get(1).unwrap().as_str().to_string();
             handles.push(tokio::spawn(async move {
                 if !path_exists(Path::new(&file_path)).await {
